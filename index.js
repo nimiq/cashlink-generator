@@ -12,25 +12,6 @@ const fundCashlinks = require('./fund-cashlinks');
 
 const Config = require('./Config');
 
-const OUTPUT = 'QR'; // QR or Coin
-
-const CASHLINK_COUNT = 2000;
-const CASHLINK_VALUE = 1000e5;
-// const CASHLINK_MESSAGE = 'Welcome to Nimiq, the Browser-first blockchain.';
-const CASHLINK_MESSAGE = 'Welcome to Nimiq - Crypto for Humans';
-
-const RPC_HOST = '127.0.0.1';
-const RPC_PORT = 8648;
-
-// has to be more than 1 luna per byte to not be considered free, thus should be at least 171 luna for creating a
-// Cashlink funding tx with its extra data as extended transaction
-const TRANSACTION_FEE = 171;
-
-// secret salt to deterministically calculate cashlinks from random tokens
-const SECRET_SALT = BufferUtils.fromBase64(fs.readFileSync('./secret/salt'));
-const TOKEN_LENGTH = 6; // length in characters
-const TOKEN_ENTROPY = TOKEN_LENGTH * 6; // in bit. The tokens are encoded as base64. Each base64 char encodes 6 bit.
-
 function createFolder() {
     function padDateComponent(value) {
         return ('0' + value).slice(-2);
@@ -51,20 +32,26 @@ function createFolder() {
 
 function createCashlinks() {
     const cashlinks = new Map(); // token -> cashlink
+    // secret salt to deterministically calculate cashlinks from random tokens
+    const secretSalt = BufferUtils.fromBase64(fs.readFileSync(Config.SECRET_SALT_FILE));
 
-    while (cashlinks.size < CASHLINK_COUNT) {
-        const randomBytes = crypto.randomBytes(Math.ceil(TOKEN_ENTROPY / 8));
-        const token = BufferUtils.toBase64Url(randomBytes).substring(0, TOKEN_LENGTH);
+    while (cashlinks.size < Config.CASHLINK_COUNT) {
+        const tokenEntropy = Config.TOKEN_LENGTH * 6; // in bit. Tokens are base64. Each base64 char encodes 6 bit.
+        const randomBytes = crypto.randomBytes(Math.ceil(tokenEntropy / 8));
+        const token = BufferUtils.toBase64Url(randomBytes).substring(0, Config.TOKEN_LENGTH);
         if (cashlinks.has(token)) continue;
 
         const tokenBytes = BufferUtils.fromBase64Url(token);
-        const saltedTokenBytes = new SerialBuffer(tokenBytes.length + SECRET_SALT.length);
+        const saltedTokenBytes = new SerialBuffer(tokenBytes.length + secretSalt.length);
         saltedTokenBytes.write(tokenBytes);
-        saltedTokenBytes.write(SECRET_SALT);
+        saltedTokenBytes.write(secretSalt);
         const privateKeyBytes = Hash.light(saltedTokenBytes).serialize();
         const privateKey = PrivateKey.unserialize(privateKeyBytes);
         const keyPair = KeyPair.derive(privateKey);
-        cashlinks.set(token, new Cashlink(Config.CASHLINK_BASE_URL, keyPair, CASHLINK_VALUE, CASHLINK_MESSAGE));
+        cashlinks.set(
+            token,
+            new Cashlink(Config.CASHLINK_BASE_URL, keyPair, Config.CASHLINK_VALUE, Config.CASHLINK_MESSAGE),
+        );
     }
     return cashlinks;
 }
@@ -130,7 +117,7 @@ async function main() {
             'Do you want to recreate the images? [y/N]: ', (answer) => resolve(answer === 'y'));
     });
     if (createImages) {
-        if (OUTPUT === 'QR') {
+        if (Config.OUTPUT === 'QR') {
             console.log('\nRendering QR Codes');
             imageFiles = renderQrCodes(shortLinks, folder);
             console.log('QR Codes rendered.\n');
@@ -147,11 +134,11 @@ async function main() {
         console.log('Cashlinks exported.\n');
     }
 
-    const rpcClient = new RpcClient(RPC_HOST, RPC_PORT);
-    if (!(await rpcClient.isConnected())) throw new Error(`Could not establish an RPC connection on ${RPC_HOST}:`
-        + `${RPC_PORT}. Make sure the RPC client is running.`);
+    const rpcClient = new RpcClient(Config.RPC_HOST, Config.RPC_PORT);
+    if (!(await rpcClient.isConnected())) throw new Error(`Could not establish an RPC connection on ${Config.RPC_HOST}:`
+        + `${Config.RPC_PORT}. Make sure the RPC client is running.`);
 
-    const requiredBalance = cashlinks.size * (cashlinks.values().next().value.value + TRANSACTION_FEE);
+    const requiredBalance = cashlinks.size * (cashlinks.values().next().value.value + Config.TRANSACTION_FEE);
     console.log('All assets for the generated Cashlinks have been created. Please check them now.');
     console.log('To continue with funding the Cashlinks, please import an account via its backup words '
         + 'to use for funding and make sure it holds at least '
@@ -176,7 +163,7 @@ async function main() {
 
     console.log('Funding Cashlinks');
     GenesisConfig[Config.NETWORK]();
-    await fundCashlinks(cashlinks, TRANSACTION_FEE, privateKey, rpcClient);
+    await fundCashlinks(cashlinks, Config.TRANSACTION_FEE, privateKey, rpcClient);
     console.log('Cashlinks funded.');
 }
 
