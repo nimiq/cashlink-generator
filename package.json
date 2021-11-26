@@ -1,0 +1,13 @@
+{
+  "name": "cashcoins",
+  "version": "0.0.1",
+  "description": "Generator for printable cashlinks",
+  "main": "index.js",
+  "author": "Nimiq, nimiq.com",
+  "license": "MIT",
+  "dependencies": {
+    "@nimiq/core": "^1.4.3",
+    "@nimiq/utils": "^0.4.1",
+    "canvas": "^2.5.0"
+  }
+}
