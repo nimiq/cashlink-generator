@@ -130,7 +130,7 @@ async function main() {
 
     if (!importedFile || createImages) { // when images recreated, reexport as image output might have changed
         console.log('Exporting cashlinks.');
-        exportCashlinks(cashlinks, shortLinks, imageFiles, `${folder}/cashlinks.csv`);
+        exportCashlinks(cashlinks, shortLinks, imageFiles, `${folder || '.'}/cashlinks.csv`);
         console.log('Cashlinks exported.\n');
     }
 

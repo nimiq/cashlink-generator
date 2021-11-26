@@ -278,7 +278,7 @@ function renderCoins(links, folder, side = 'both') {
                 // start a new page
                 if (page >= 0) {
                     if (side === 'back') break; // for back side no need to render multiple pages
-                    fs.writeFileSync(`${folder}/cashcoins_${page}.svg`, canvas.toBuffer());
+                    fs.writeFileSync(`${folder || '.'}/cashcoins_${page}.svg`, canvas.toBuffer());
                     // for some reason can't just clear and reuse the old canvas after calling toBuffer (subsequent
                     // calls of toBuffer will always return the same image), therefore we create a new one
                     ({ canvas, context } = initCanvas());
@@ -303,9 +303,9 @@ function renderCoins(links, folder, side = 'both') {
 
     // save last page or single back page
     if (side === 'front') {
-        fs.writeFileSync(`${folder}/cashcoins_${page}.svg`, canvas.toBuffer());
+        fs.writeFileSync(`${folder || '.'}/cashcoins_${page}.svg`, canvas.toBuffer());
     } else {
-        fs.writeFileSync(`${folder}/cashcoins_back.svg`, canvas.toBuffer());
+        fs.writeFileSync(`${folder || '.'}/cashcoins_back.svg`, canvas.toBuffer());
     }
     return filenames;
 }

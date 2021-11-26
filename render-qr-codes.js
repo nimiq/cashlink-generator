@@ -33,7 +33,7 @@ function renderQrCodes(links, folder, options = {}) {
     for (const [token, link] of links) {
         const filename = `qr-${token}.svg`;
         filenames.set(token, filename);
-        createQrCode(`${folder}/${filename}`, link, options);
+        createQrCode(`${folder || '.'}/${filename}`, link, options);
     }
     return filenames;
 }
