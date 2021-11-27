@@ -14,6 +14,7 @@ const {
     MnemonicUtils,
     Mempool,
 } = require('@nimiq/core');
+const { CashlinkTheme } = require('@nimiq/hub-api');
 const { Cashlink } = require('./Cashlink');
 const { importCashlinks, exportCashlinks } = require('./file-handler');
 const renderCoins = require('./render-coins');
@@ -46,7 +47,7 @@ function createFolder() {
     return folder;
 }
 
-function createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage) {
+function createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage, cashlinkTheme) {
     const cashlinks = new Map(); // token -> cashlink
     // secret salt to deterministically calculate cashlinks from random tokens
     const secretSalt = BufferUtils.fromBase64(fs.readFileSync(Config.SECRET_SALT_FILE));
@@ -64,7 +65,10 @@ function createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage) {
         const privateKeyBytes = Hash.light(saltedTokenBytes).serialize();
         const privateKey = PrivateKey.unserialize(privateKeyBytes);
         const keyPair = KeyPair.derive(privateKey);
-        cashlinks.set(token, new Cashlink(Config.CASHLINK_BASE_URL, keyPair, cashlinkValue, cashlinkMessage));
+        cashlinks.set(
+            token,
+            new Cashlink(Config.CASHLINK_BASE_URL, keyPair, cashlinkValue, cashlinkMessage, cashlinkTheme),
+        );
     }
     return cashlinks;
 }
@@ -130,9 +134,21 @@ async function wizardCreateCashlinks() {
     const defaultCashlinkMessage = 'Welcome to Nimiq - Crypto for Humans';
     const cashlinkMessage = await prompt(`Cashlink message [default: "${defaultCashlinkMessage}"]: `)
         || defaultCashlinkMessage;
+    const cashlinkTheme = await prompt('Cashlink theme [UNSPECIFIED/'
+        + Object.keys(CashlinkTheme)
+            // filter out https://www.typescriptlang.org/docs/handbook/enums.html#reverse-mappings and UNSPECIFIED
+            .filter((name) => !/^(UNSPECIFIED|\d+)$/i.test(name))
+            .map((name) => name.toLowerCase())
+            .join('/')
+        + '/0..255]: ',
+    ).then((providedTheme) => {
+        return parseInt(providedTheme)
+            || CashlinkTheme[providedTheme.toUpperCase()]
+            || CashlinkTheme.UNSPECIFIED
+    });
 
     console.log('\nCreating Cashlinks');
-    const cashlinks = createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage);
+    const cashlinks = createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage, cashlinkTheme);
     const shortLinks = new Map([...cashlinks.keys()]
         .map((token) => [token, `${Config.SHORT_LINK_BASE_URL}${token}`]));
     console.log(`${cashlinks.size} Cashlinks created.\n`);

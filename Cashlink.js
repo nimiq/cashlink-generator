@@ -1,5 +1,6 @@
 const { NumberUtils, SerialBuffer, BufferUtils, KeyPair, PrivateKey } = require('@nimiq/core');
 const { Utf8Tools } = require('@nimiq/utils');
+const { CashlinkTheme } = require('@nimiq/hub-api');
 
 const CashlinkExtraData = {
     FUNDING:  new Uint8Array([0, 130, 128, 146, 135]), // 'CASH'.split('').map(c => c.charCodeAt(0) + 63)
@@ -22,15 +23,20 @@ class Cashlink {
             const messageBytes = buf.read(messageLength);
             message = Utf8Tools.utf8ByteArrayToString(messageBytes);
         }
+        let theme;
+        if (buf.readPos < buf.byteLength) {
+            theme = buf.readUint8();
+        }
 
-        return new Cashlink(baseUrl, keyPair, value, message);
+        return new Cashlink(baseUrl, keyPair, value, message, theme);
     }
 
-    constructor(baseUrl, keyPair, value /*luna*/, message = '') {
+    constructor(baseUrl, keyPair, value /*luna*/, message = '', theme = CashlinkTheme.UNSPECIFIED) {
         this._baseUrl = baseUrl;
         this._keyPair = keyPair;
         this._value = value;
         this._message = message;
+        this._theme = theme;
     }
 
     get value() {
@@ -39,6 +45,10 @@ class Cashlink {
 
     get message() {
         return this._message;
+    }
+
+    get theme() {
+        return this._theme;
     }
 
     get address() {
@@ -52,19 +62,24 @@ class Cashlink {
     render() {
         const messageBytes = Utf8Tools.stringToUtf8ByteArray(this._message);
         if (!NumberUtils.isUint8(messageBytes.byteLength)) throw new Error('Message is too long');
+        if (this._theme && !NumberUtils.isUint8(this._theme)) throw new Error('Invalid theme');
 
         const buf = new SerialBuffer(
             /*key*/ this._keyPair.privateKey.serializedSize +
             /*value*/ 8 +
-            /*message length*/ (messageBytes.byteLength ? 1 : 0) +
-            /*message*/ messageBytes.byteLength,
+            /*message length*/ (messageBytes.byteLength || this._theme ? 1 : 0) +
+            /*message*/ messageBytes.byteLength +
+            /*theme*/ (this._theme ? 1 : 0),
         );
 
         this._keyPair.privateKey.serialize(buf);
         buf.writeUint64(this._value);
-        if (messageBytes.byteLength) {
+        if (messageBytes.byteLength || this._theme) {
             buf.writeUint8(messageBytes.byteLength);
             buf.write(messageBytes);
+        }
+        if (this._theme) {
+            buf.writeUint8(this._theme);
         }
 
         let result = BufferUtils.toBase64Url(buf);
