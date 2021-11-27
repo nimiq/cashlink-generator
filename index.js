@@ -1,8 +1,19 @@
 const crypto = require('crypto');
 const fs = require('fs');
+const path = require('path');
 const readline = require('readline');
 const Writable = require('stream').Writable;
-const { GenesisConfig, KeyPair, PrivateKey, PublicKey, BufferUtils, SerialBuffer, Hash, MnemonicUtils } = require('@nimiq/core');
+const {
+    GenesisConfig,
+    KeyPair,
+    PrivateKey,
+    PublicKey,
+    BufferUtils,
+    SerialBuffer,
+    Hash,
+    MnemonicUtils,
+    Mempool,
+} = require('@nimiq/core');
 const { Cashlink } = require('./Cashlink');
 const { importCashlinks, exportCashlinks } = require('./file-handler');
 const renderCoins = require('./render-coins');
@@ -11,6 +22,11 @@ const RpcClient = require('./RpcClient');
 const fundCashlinks = require('./fund-cashlinks');
 
 const Config = require('./Config');
+
+const Operation = {
+    CREATE_IMAGES: 'create-images',
+    FUND: 'fund',
+};
 
 function createFolder() {
     function padDateComponent(value) {
@@ -30,12 +46,12 @@ function createFolder() {
     return folder;
 }
 
-function createCashlinks() {
+function createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage) {
     const cashlinks = new Map(); // token -> cashlink
     // secret salt to deterministically calculate cashlinks from random tokens
     const secretSalt = BufferUtils.fromBase64(fs.readFileSync(Config.SECRET_SALT_FILE));
 
-    while (cashlinks.size < Config.CASHLINK_COUNT) {
+    while (cashlinks.size < cashlinkCount) {
         const tokenEntropy = Config.TOKEN_LENGTH * 6; // in bit. Tokens are base64. Each base64 char encodes 6 bit.
         const randomBytes = crypto.randomBytes(Math.ceil(tokenEntropy / 8));
         const token = BufferUtils.toBase64Url(randomBytes).substring(0, Config.TOKEN_LENGTH);
@@ -48,10 +64,7 @@ function createCashlinks() {
         const privateKeyBytes = Hash.light(saltedTokenBytes).serialize();
         const privateKey = PrivateKey.unserialize(privateKeyBytes);
         const keyPair = KeyPair.derive(privateKey);
-        cashlinks.set(
-            token,
-            new Cashlink(Config.CASHLINK_BASE_URL, keyPair, Config.CASHLINK_VALUE, Config.CASHLINK_MESSAGE),
-        );
+        cashlinks.set(token, new Cashlink(Config.CASHLINK_BASE_URL, keyPair, cashlinkValue, cashlinkMessage));
     }
     return cashlinks;
 }
@@ -83,94 +96,135 @@ async function importPrivateKey() {
     });
 }
 
-async function main() {
-    console.log('Welcome to the printable cashlink generator!\n');
-
-    let rl = readline.createInterface({
+async function prompt(question) {
+    const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
         terminal: true,
     });
-    let importedFile = await new Promise((resolve) =>
-        rl.question('Do you want to create new cashlinks or load existing cashlinks?\n' +
-            'If you want to load cashlinks, specify the path to the exported csv file: ', (path) => resolve(path))
-    );
+    const response = await new Promise((resolve) => rl.question(question, resolve));
+    rl.close();
+    return response;
+}
 
-    let folder, cashlinks, shortLinks, imageFiles;
-    if (importedFile) {
-        if (!fs.existsSync(importedFile)) throw new Error(`File ${importedFile} not found.`);
-        folder = importedFile.substring(0, importedFile.lastIndexOf('/'));
-        console.log('\nLoading Cashlinks');
-        ({ cashlinks, shortLinks, imageFiles } = importCashlinks(importedFile));
-        console.log('Cashlinks loaded.\n');
+async function wizardImportCashlinks() {
+    let importedFile = await prompt('Do you want to create new cashlinks or load existing cashlinks?\n'
+        + 'If you want to load cashlinks, specify the path to the exported csv file: ');
+    if (!importedFile) return null;
+    importedFile = path.resolve(importedFile);
+    if (!fs.statSync(importedFile).isFile()) throw new Error(`${importedFile} is not a file.`);
+
+    console.log('\nLoading Cashlinks');
+    const folder = importedFile.substring(0, importedFile.lastIndexOf('/'));
+    const { cashlinks, shortLinks, imageFiles } = importCashlinks(importedFile);
+    console.log(`${cashlinks.size} Cashlinks loaded.\n`);
+
+    return { cashlinks, shortLinks, imageFiles, folder };
+}
+
+async function wizardCreateCashlinks() {
+    const cashlinkCount = parseInt(await prompt('How many Cashlinks do you want to create?: '));
+    if (Number.isNaN(cashlinkCount) || cashlinkCount <= 0) throw new Error(`Invalid cashlink count ${cashlinkCount}`);
+    const cashlinkValue = Math.round(parseFloat(await prompt('Cashlink value in NIM: ')) * 1e5);
+    if (Number.isNaN(cashlinkValue) || cashlinkValue <= 0) throw new Error('Invalid cashlink value');
+    const defaultCashlinkMessage = 'Welcome to Nimiq - Crypto for Humans';
+    const cashlinkMessage = await prompt(`Cashlink message [default: "${defaultCashlinkMessage}"]: `)
+        || defaultCashlinkMessage;
+
+    console.log('\nCreating Cashlinks');
+    const cashlinks = createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage);
+    const shortLinks = new Map([...cashlinks.keys()]
+        .map((token) => [token, `${Config.SHORT_LINK_BASE_URL}${token}`]));
+    console.log(`${cashlinks.size} Cashlinks created.\n`);
+
+    return { cashlinks, shortLinks };
+}
+
+async function wizardCreateImages(shortLinks, folder) {
+    const format = await prompt('Choose an output format [QR/coin]: ')
+    let imageFiles;
+    if (format !== 'coin') {
+        console.log('\nRendering QR Codes');
+        imageFiles = renderQrCodes(shortLinks, folder);
+        console.log('QR Codes rendered.\n');
     } else {
+        console.log('\nRendering CashCoins');
+        imageFiles = renderCoins(shortLinks, folder);
+        console.log('CashCoins rendered.\n');
+    }
+    return imageFiles;
+}
+
+async function wizardFundCashlinks(cashlinks) {
+    const rpcClient = new RpcClient(Config.RPC_HOST, Config.RPC_PORT);
+    if (!(await rpcClient.isConnected())) throw new Error(`Could not establish an RPC connection on ${Config.RPC_HOST}:`
+        + `${Config.RPC_PORT}. Make sure the Nimiq node is running with enabled RPC.`);
+
+    const minimumNonFreeFee = 171 * Mempool.TRANSACTION_RELAY_FEE_MIN; // 171 byte (extended tx + cashlink extra data)
+    const fee = await prompt(`Funding fees [FREE/paid (${minimumNonFreeFee / 1e5} NIM per Cashlink)]: `) === 'paid'
+        ? minimumNonFreeFee
+        : 0;
+    const totalFees = cashlinks.size * fee;
+    const requiredBalance = cashlinks.size * cashlinks.values().next().value.value + totalFees;
+    console.log('\nBefore funding the Cashlinks, please check the generated assets.');
+    console.log('To continue with funding, please import an account via its backup words to use for funding and make '
+        + `sure it holds at least ${requiredBalance / 1e5} NIM (of which ${totalFees / 1e5} NIM fees).\n`
+        + 'Note that it\'s recommendable to create a new key only for this operation.');
+
+    const privateKey = await importPrivateKey();
+    const address = PublicKey.derive(privateKey).toAddress();
+    const balance = await rpcClient.getBalance(address);
+
+    console.log(`Using address ${address.toUserFriendlyAddress()} with balance ${balance / 1e5}`);
+    if (balance < requiredBalance) throw new Error('Not enough balance.');
+    if (await prompt('Ok? [y/N]: ') !== 'y') {
+        console.log('Not funding Cashlinks.');
+        return;
+    }
+
+    console.log('\nFunding Cashlinks');
+    GenesisConfig[Config.NETWORK]();
+    await fundCashlinks(cashlinks, fee, privateKey, rpcClient);
+    console.log('Cashlinks funded.');
+}
+
+async function main() {
+    console.log('Welcome to the printable cashlink generator!\n');
+
+    let cashlinks, shortLinks, imageFiles, folder, operations;
+    const importResult = await wizardImportCashlinks();
+    if (importResult) {
+        ({ cashlinks, shortLinks, imageFiles, folder } = importResult);
+        const operation = await prompt(`What do you want to do? [${Object.values(Operation).join('/')}]: `);
+        if (!Object.values(Operation).includes(operation)) throw new Error(`Unsupported operation ${operation}`);
+        operations = [operation];
+    } else {
+        ({ cashlinks, shortLinks } = await wizardCreateCashlinks());
         folder = createFolder();
-        console.log('\nCreating Cashlinks');
-        cashlinks = createCashlinks();
-        shortLinks = new Map([...cashlinks.keys()]
-            .map((token) => [token, `${Config.SHORT_LINK_BASE_URL}${token}`]));
-        console.log('Cashlinks created.\n');
+        operations = [Operation.CREATE_IMAGES, Operation.FUND];
     }
 
-    const createImages = !importedFile || await new Promise((resolve) => {
-        rl.question('You imported Cashlinks for which already images have been generated.\n' +
-            'Do you want to recreate the images? [y/N]: ', (answer) => resolve(answer === 'y'));
-    });
-    if (createImages) {
-        if (Config.OUTPUT === 'QR') {
-            console.log('\nRendering QR Codes');
-            imageFiles = renderQrCodes(shortLinks, folder);
-            console.log('QR Codes rendered.\n');
-        } else {
-            console.log('\nRendering CashCoins');
-            imageFiles = renderCoins(shortLinks, folder);
-            console.log('CashCoins rendered.\n');
-        }
+    if (operations.includes(Operation.CREATE_IMAGES)) {
+        imageFiles = await wizardCreateImages(shortLinks, folder);
     }
 
-    if (!importedFile || createImages) { // when images recreated, reexport as image output might have changed
+    if (!importResult || operations.includes(Operation.CREATE_IMAGES)) {
+        // Export newly created cashlinks or if image output format might have changed
         console.log('Exporting cashlinks.');
         exportCashlinks(cashlinks, shortLinks, imageFiles, `${folder || '.'}/cashlinks.csv`);
         console.log('Cashlinks exported.\n');
     }
 
-    const rpcClient = new RpcClient(Config.RPC_HOST, Config.RPC_PORT);
-    if (!(await rpcClient.isConnected())) throw new Error(`Could not establish an RPC connection on ${Config.RPC_HOST}:`
-        + `${Config.RPC_PORT}. Make sure the RPC client is running.`);
+    if (operations.includes(Operation.FUND)) {
+        await wizardFundCashlinks(cashlinks);
+    }
 
-    const requiredBalance = cashlinks.size * (cashlinks.values().next().value.value + Config.TRANSACTION_FEE);
-    console.log('All assets for the generated Cashlinks have been created. Please check them now.');
-    console.log('To continue with funding the Cashlinks, please import an account via its backup words '
-        + 'to use for funding and make sure it holds at least '
-        + (requiredBalance /1e5) + ' NIM.\n'
-        + 'Note that it\'s recommendable to create a new key only for this operation.');
-
-    rl.close(); // close old rl for mutable private key rl
-    const privateKey = await importPrivateKey();
-    const address = PublicKey.derive(privateKey).toAddress();
-    const balance = await rpcClient.getBalance(address);
-
-    rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-        terminal: true,
-    });
-    console.log(`Using address ${address.toUserFriendlyAddress()} with balance ${balance / 1e5}`);
-    if (balance < requiredBalance) throw new Error('Not enough balance.');
-    if (!(await new Promise((resolve) =>
-        rl.question('Ok? [y/N]: ', (answer) => resolve(answer === 'y'))))) return;
-    rl.close();
-
-    console.log('Funding Cashlinks');
-    GenesisConfig[Config.NETWORK]();
-    await fundCashlinks(cashlinks, Config.TRANSACTION_FEE, privateKey, rpcClient);
-    console.log('Cashlinks funded.');
+    console.log('\nAll operations finished :)');
 }
 
 main();
 
 // TODO support recollecting unclaimed cashlinks
-// TODO turn the main method into a wizard
 // TODO support creating cashlinks without short links
 // TODO error handling
 

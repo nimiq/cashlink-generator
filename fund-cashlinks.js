@@ -20,7 +20,7 @@ async function fundCashlinks(cashlinks, txFee, privateKey, rpcClient) {
     // The transactions all have the same size. Test via one example transaction whether the transactions will be
     // considered as free transactions.
     const testTx = createCashlinkFundingTransaction(senderAddress, cashlinks[0].address, 1, txFee, 0, keyPair);
-    console.log(`Tx size: ${testTx.serializedSize}`);
+    // console.log(`Tx size: ${testTx.serializedSize}`);
     const isFree = testTx.feePerByte < Mempool.TRANSACTION_RELAY_FEE_MIN;
     if (txFee !== 0 && isFree) throw new Error('Specified fee is too low to qualify as paid transaction. '
         + `Use at least ${testTx.serializedSize * Mempool.TRANSACTION_RELAY_FEE_MIN} luna.`);
