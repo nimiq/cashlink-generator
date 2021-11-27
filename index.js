@@ -165,7 +165,7 @@ async function wizardFundCashlinks(cashlinks) {
         ? minimumNonFreeFee
         : 0;
     const totalFees = cashlinks.size * fee;
-    const requiredBalance = cashlinks.size * cashlinks.values().next().value.value + totalFees;
+    const requiredBalance = [...cashlinks.values()].reduce((sum, cashlink) => sum + cashlink.value, 0) + totalFees;
     console.log('\nBefore funding the Cashlinks, please check the generated assets.');
     console.log('To continue with funding, please import an account via its backup words to use for funding and make '
         + `sure it holds at least ${requiredBalance / 1e5} NIM (of which ${totalFees / 1e5} NIM fees).\n`
