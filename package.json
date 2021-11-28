@@ -6,9 +6,9 @@
   "author": "Nimiq, nimiq.com",
   "license": "MIT",
   "dependencies": {
-    "@nimiq/core": "^1.4.3",
+    "@nimiq/core": "^1.5.8",
     "@nimiq/hub-api": "^1.5.1",
-    "@nimiq/utils": "^0.4.1",
-    "canvas": "^2.5.0"
+    "@nimiq/utils": "^0.8.2",
+    "canvas": "^2.8.0"
   }
 }
