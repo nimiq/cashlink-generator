@@ -77,33 +77,6 @@ function createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage, cashlink
     return cashlinks;
 }
 
-async function importPrivateKey() {
-    return new Promise((resolve) => {
-        const mutableStdout = new Writable({
-            write: function(chunk, encoding, callback) {
-                if (!this.muted) {
-                    process.stdout.write(chunk, encoding);
-                }
-                callback();
-            }
-        });
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: mutableStdout,
-            terminal: true
-        });
-        mutableStdout.muted = false;
-        // Request password.
-        rl.question('Account (backup words): ', (mnemonic) => {
-            rl.close();
-            const extendedPrivateKey = MnemonicUtils.mnemonicToExtendedPrivateKey(mnemonic);
-            const privateKey = extendedPrivateKey.derivePath(`m/44'/242'/0'/0'`).privateKey;
-            resolve(privateKey);
-        });
-        mutableStdout.muted = true;
-    });
-}
-
 async function prompt(question) {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -132,6 +105,43 @@ async function promptCashlinkTheme(oldCashlinkTheme) {
     return parseInt(cashlinkTheme)
         || CashlinkTheme[cashlinkTheme.toUpperCase()]
         || CashlinkTheme.UNSPECIFIED;
+}
+
+async function promptPrivateKey() {
+    // Request backup words. Supports multiline input (pasting words separated by newlines).
+    const mutableStdout = new Writable({
+        write: function(chunk, encoding, callback) {
+            if (!this.muted) {
+                process.stdout.write(chunk, encoding);
+            }
+            callback();
+        }
+    });
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: mutableStdout,
+        terminal: true
+    });
+
+    mutableStdout.muted = false;
+    rl.setPrompt('Account (backup words): ');
+    rl.prompt(true);
+    mutableStdout.muted = true;
+
+    const backupWords = [];
+    rl.on('line', (line) => {
+        // split at whitespace and strip numbers for direct copying from Nimiq Keyguard
+        backupWords.push(...line.split(/\d*\s+\d*|\d+/g).filter((word) => !!word));
+        if (backupWords.length < 24) return;
+        rl.close();
+    });
+
+    mutableStdout.muted = true;
+    return new Promise((resolve) => rl.on('close', () => {
+        const extendedPrivateKey = MnemonicUtils.mnemonicToExtendedPrivateKey(backupWords.join(' '));
+        const privateKey = extendedPrivateKey.derivePath(`m/44'/242'/0'/0'`).privateKey;
+        resolve(privateKey);
+    }));
 }
 
 async function wizardImportCashlinks() {
@@ -230,7 +240,7 @@ async function wizardFundCashlinks(cashlinks) {
         + `sure it holds at least ${requiredBalance / 1e5} NIM (of which ${totalFees / 1e5} NIM fees).\n`
         + 'Note that it\'s recommendable to create a new key only for this operation.');
 
-    const privateKey = await importPrivateKey();
+    const privateKey = await promptPrivateKey();
     const address = PublicKey.derive(privateKey).toAddress();
     const balance = await rpcClient.getBalance(address);
 
