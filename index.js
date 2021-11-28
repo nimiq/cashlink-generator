@@ -25,6 +25,7 @@ const fundCashlinks = require('./fund-cashlinks');
 const Config = require('./Config');
 
 const Operation = {
+    CHANGE_MESSAGE: 'change-message',
     CREATE_IMAGES: 'create-images',
     FUND: 'fund',
 };
@@ -171,6 +172,21 @@ async function wizardCreateImages(shortLinks, folder) {
     return imageFiles;
 }
 
+async function wizardChangeMessage(cashlinks) {
+    const oldCashlinkMessage = cashlinks.values().next().value.message;
+    const newCashlinkMessage = await prompt(`New Cashlink message [old message: "${oldCashlinkMessage}"]: `)
+        || oldCashlinkMessage;
+    if (oldCashlinkMessage === newCashlinkMessage) {
+        console.log('Keeping the old Cashlink message.')
+        return;
+    }
+    console.log('\nChanging Cashlink message');
+    for (const cashlink of cashlinks.values()) {
+        cashlink.message = newCashlinkMessage;
+    }
+    console.log('Cashlink message changed.\n');
+}
+
 async function wizardFundCashlinks(cashlinks) {
     const rpcClient = new RpcClient(Config.RPC_HOST, Config.RPC_PORT);
     if (!(await rpcClient.isConnected())) throw new Error(`Could not establish an RPC connection on ${Config.RPC_HOST}:`
@@ -224,8 +240,11 @@ async function main() {
         imageFiles = await wizardCreateImages(shortLinks, folder);
     }
 
-    if (!importResult || operations.includes(Operation.CREATE_IMAGES)) {
-        // Export newly created cashlinks or if image output format might have changed
+    if (operations.includes(Operation.CHANGE_MESSAGE)) {
+        await wizardChangeMessage(cashlinks);
+    }
+
+    if (operations.some((o) => [Operation.CREATE_IMAGES, Operation.CHANGE_MESSAGE].includes(o)) || !importResult) {
         console.log('Exporting cashlinks.');
         exportCashlinks(cashlinks, shortLinks, imageFiles, `${folder || '.'}/cashlinks.csv`);
         console.log('Cashlinks exported.\n');

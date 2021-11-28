@@ -24,6 +24,7 @@ function importCashlinks(file) {
         shortLinks.set(token, shortLink);
         imageFiles.set(token, imageFile);
     }
+    if (cashlinks.size === 0) throw new Error('No cashlinks imported.');
     return { cashlinks, shortLinks, imageFiles };
 }
 

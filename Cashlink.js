@@ -35,7 +35,7 @@ class Cashlink {
         this._baseUrl = baseUrl;
         this._keyPair = keyPair;
         this._value = value;
-        this._message = message;
+        this.message = message;
         this._theme = theme;
     }
 
@@ -44,7 +44,13 @@ class Cashlink {
     }
 
     get message() {
-        return this._message;
+        return Utf8Tools.utf8ByteArrayToString(this._messageBytes);
+    }
+
+    set message(message) {
+        const messageBytes = Utf8Tools.stringToUtf8ByteArray(message);
+        if (!NumberUtils.isUint8(messageBytes.byteLength)) throw new Error('Cashlink message is too long');
+        this._messageBytes = messageBytes;
     }
 
     get theme() {
@@ -60,23 +66,21 @@ class Cashlink {
     }
 
     render() {
-        const messageBytes = Utf8Tools.stringToUtf8ByteArray(this._message);
-        if (!NumberUtils.isUint8(messageBytes.byteLength)) throw new Error('Message is too long');
         if (this._theme && !NumberUtils.isUint8(this._theme)) throw new Error('Invalid theme');
 
         const buf = new SerialBuffer(
             /*key*/ this._keyPair.privateKey.serializedSize +
             /*value*/ 8 +
-            /*message length*/ (messageBytes.byteLength || this._theme ? 1 : 0) +
-            /*message*/ messageBytes.byteLength +
+            /*message length*/ (this._messageBytes.byteLength || this._theme ? 1 : 0) +
+            /*message*/ this._messageBytes.byteLength +
             /*theme*/ (this._theme ? 1 : 0),
         );
 
         this._keyPair.privateKey.serialize(buf);
         buf.writeUint64(this._value);
-        if (messageBytes.byteLength || this._theme) {
-            buf.writeUint8(messageBytes.byteLength);
-            buf.write(messageBytes);
+        if (this._messageBytes.byteLength || this._theme) {
+            buf.writeUint8(this._messageBytes.byteLength);
+            buf.write(this._messageBytes);
         }
         if (this._theme) {
             buf.writeUint8(this._theme);
