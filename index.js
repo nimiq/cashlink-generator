@@ -187,13 +187,14 @@ async function wizardChangeMessage(cashlinks) {
         || oldCashlinkMessage;
     if (oldCashlinkMessage === newCashlinkMessage) {
         console.log('Keeping the old Cashlink message.')
-        return;
+        return false;
     }
     console.log('\nChanging Cashlink message');
     for (const cashlink of cashlinks.values()) {
         cashlink.message = newCashlinkMessage;
     }
     console.log('Cashlink message changed.\n');
+    return true;
 }
 
 async function wizardChangeTheme(cashlinks) {
@@ -201,13 +202,14 @@ async function wizardChangeTheme(cashlinks) {
     const newCashlinkTheme = await promptCashlinkTheme(oldCashlinkTheme);
     if (oldCashlinkTheme === newCashlinkTheme) {
         console.log('Keeping the old Cashlink theme.')
-        return;
+        return false;
     }
     console.log('\nChanging Cashlink theme');
     for (const cashlink of cashlinks.values()) {
         cashlink.theme = newCashlinkTheme;
     }
     console.log('Cashlink theme changed.\n');
+    return true;
 }
 
 async function wizardFundCashlinks(cashlinks) {
@@ -248,6 +250,7 @@ async function main() {
 
     let cashlinks, shortLinks, imageFiles, folder, operations;
     const importResult = await wizardImportCashlinks();
+    let shouldExport = !importResult;
     if (importResult) {
         ({ cashlinks, shortLinks, imageFiles, folder } = importResult);
         const operation = await prompt(`What do you want to do? [${Object.values(Operation).join('/')}]: `);
@@ -260,25 +263,28 @@ async function main() {
     }
 
     if (operations.includes(Operation.CREATE_IMAGES)) {
+        const oldImageFiles = imageFiles;
         imageFiles = await wizardCreateImages(shortLinks, folder);
+        shouldExport = shouldExport || !oldImageFiles
+            || oldImageFiles.values().next().value !== imageFiles.values().next().value;
     }
 
     if (operations.includes(Operation.CHANGE_MESSAGE)) {
-        await wizardChangeMessage(cashlinks);
+        shouldExport = shouldExport || await wizardChangeMessage(cashlinks);
     }
 
     if (operations.includes(Operation.CHANGE_THEME)) {
-        await wizardChangeTheme(cashlinks);
+        shouldExport = shouldExport || await wizardChangeTheme(cashlinks);
     }
 
-    if (operations.some((o) => [Operation.CREATE_IMAGES, Operation.CHANGE_MESSAGE, Operation.CHANGE_THEME].includes(o))
-        || !importResult) {
+    if (shouldExport) {
         console.log('Exporting cashlinks.');
         exportCashlinks(cashlinks, shortLinks, imageFiles, `${folder || '.'}/cashlinks.csv`);
         console.log('Cashlinks exported.\n');
     }
 
     if (operations.includes(Operation.FUND)) {
+        // fund after export, to make sure the cashlinks were saved, if needed
         await wizardFundCashlinks(cashlinks);
     }
 
