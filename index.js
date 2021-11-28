@@ -31,18 +31,20 @@ const Operation = {
     FUND: 'fund',
 };
 
-function createFolder() {
+function getCurrentDateString() {
     function padDateComponent(value) {
         return ('0' + value).slice(-2);
     }
-
     const date = new Date();
-    const dateString = date.getFullYear() + '-'
+    return date.getFullYear() + '-'
         + padDateComponent(date.getMonth() + 1) + '-'
         + padDateComponent(date.getDate()) + '_'
         + padDateComponent(date.getHours())
         + padDateComponent(date.getMinutes());
-    const folder = `${__dirname}/${dateString}`;
+}
+
+function createFolder() {
+    const folder = `${__dirname}/generated-cashlinks/${getCurrentDateString()}`;
     if (!fs.existsSync(folder)){
         fs.mkdirSync(folder);
     }
@@ -279,8 +281,11 @@ async function main() {
 
     if (shouldExport) {
         console.log('Exporting cashlinks.');
-        exportCashlinks(cashlinks, shortLinks, imageFiles, `${folder || '.'}/cashlinks.csv`);
-        console.log('Cashlinks exported.\n');
+        const file = `${folder || '.'}/cashlinks`
+            + (importResult ? ` (update ${getCurrentDateString()} ${operations.join(' ')})` : '')
+            + '.csv';
+        exportCashlinks(cashlinks, shortLinks, imageFiles, file);
+        console.log(`Cashlinks exported to ${file.replace(__dirname, '.')}.\n`);
     }
 
     if (operations.includes(Operation.FUND)) {
