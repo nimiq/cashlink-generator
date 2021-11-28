@@ -26,6 +26,7 @@ const Config = require('./Config');
 
 const Operation = {
     CHANGE_MESSAGE: 'change-message',
+    CHANGE_THEME: 'change-theme',
     CREATE_IMAGES: 'create-images',
     FUND: 'fund',
 };
@@ -112,6 +113,25 @@ async function prompt(question) {
     return response;
 }
 
+async function promptCashlinkTheme(oldCashlinkTheme) {
+    const cashlinkTheme = await prompt(`${oldCashlinkTheme !== undefined ? 'New ' : ''}Cashlink theme `
+        + `[UNSPECIFIED/`
+        + Object.keys(CashlinkTheme)
+            // filter out https://www.typescriptlang.org/docs/handbook/enums.html#reverse-mappings and UNSPECIFIED
+            .filter((name) => !/^(UNSPECIFIED|\d+)$/i.test(name))
+            .map((name) => name.toLowerCase())
+            .join('/')
+        + '/0..255' // ability to specify theme as a number for themes that are not defined in HubApi yet
+        + (oldCashlinkTheme !== undefined
+            ? `; old theme: ${CashlinkTheme[oldCashlinkTheme].toLowerCase() || oldCashlinkTheme}` // reverse map or num
+            : '')
+        + ']: ',
+    );
+    return parseInt(cashlinkTheme)
+        || CashlinkTheme[cashlinkTheme.toUpperCase()]
+        || CashlinkTheme.UNSPECIFIED;
+}
+
 async function wizardImportCashlinks() {
     let importedFile = await prompt('Do you want to create new cashlinks or load existing cashlinks?\n'
         + 'If you want to load cashlinks, specify the path to the exported csv file: ');
@@ -135,18 +155,7 @@ async function wizardCreateCashlinks() {
     const defaultCashlinkMessage = 'Welcome to Nimiq - Crypto for Humans';
     const cashlinkMessage = await prompt(`Cashlink message [default: "${defaultCashlinkMessage}"]: `)
         || defaultCashlinkMessage;
-    const cashlinkTheme = await prompt('Cashlink theme [UNSPECIFIED/'
-        + Object.keys(CashlinkTheme)
-            // filter out https://www.typescriptlang.org/docs/handbook/enums.html#reverse-mappings and UNSPECIFIED
-            .filter((name) => !/^(UNSPECIFIED|\d+)$/i.test(name))
-            .map((name) => name.toLowerCase())
-            .join('/')
-        + '/0..255]: ',
-    ).then((providedTheme) => {
-        return parseInt(providedTheme)
-            || CashlinkTheme[providedTheme.toUpperCase()]
-            || CashlinkTheme.UNSPECIFIED
-    });
+    const cashlinkTheme = await promptCashlinkTheme();
 
     console.log('\nCreating Cashlinks');
     const cashlinks = createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage, cashlinkTheme);
@@ -185,6 +194,20 @@ async function wizardChangeMessage(cashlinks) {
         cashlink.message = newCashlinkMessage;
     }
     console.log('Cashlink message changed.\n');
+}
+
+async function wizardChangeTheme(cashlinks) {
+    const oldCashlinkTheme = cashlinks.values().next().value.theme;
+    const newCashlinkTheme = await promptCashlinkTheme(oldCashlinkTheme);
+    if (oldCashlinkTheme === newCashlinkTheme) {
+        console.log('Keeping the old Cashlink theme.')
+        return;
+    }
+    console.log('\nChanging Cashlink theme');
+    for (const cashlink of cashlinks.values()) {
+        cashlink.theme = newCashlinkTheme;
+    }
+    console.log('Cashlink theme changed.\n');
 }
 
 async function wizardFundCashlinks(cashlinks) {
@@ -244,7 +267,12 @@ async function main() {
         await wizardChangeMessage(cashlinks);
     }
 
-    if (operations.some((o) => [Operation.CREATE_IMAGES, Operation.CHANGE_MESSAGE].includes(o)) || !importResult) {
+    if (operations.includes(Operation.CHANGE_THEME)) {
+        await wizardChangeTheme(cashlinks);
+    }
+
+    if (operations.some((o) => [Operation.CREATE_IMAGES, Operation.CHANGE_MESSAGE, Operation.CHANGE_THEME].includes(o))
+        || !importResult) {
         console.log('Exporting cashlinks.');
         exportCashlinks(cashlinks, shortLinks, imageFiles, `${folder || '.'}/cashlinks.csv`);
         console.log('Cashlinks exported.\n');

@@ -36,7 +36,7 @@ class Cashlink {
         this._keyPair = keyPair;
         this._value = value;
         this.message = message;
-        this._theme = theme;
+        this.theme = theme;
     }
 
     get value() {
@@ -57,6 +57,11 @@ class Cashlink {
         return this._theme;
     }
 
+    set theme(theme) {
+        if (!NumberUtils.isUint8(theme)) throw new Error(`Invalid theme ${theme}`);
+        this._theme = theme;
+    }
+
     get address() {
         return this._keyPair.publicKey.toAddress();
     }
@@ -66,8 +71,6 @@ class Cashlink {
     }
 
     render() {
-        if (this._theme && !NumberUtils.isUint8(this._theme)) throw new Error('Invalid theme');
-
         const buf = new SerialBuffer(
             /*key*/ this._keyPair.privateKey.serializedSize +
             /*value*/ 8 +
