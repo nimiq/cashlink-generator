@@ -4,6 +4,7 @@ const path = require('path');
 const readline = require('readline');
 const Writable = require('stream').Writable;
 const {
+    Address,
     GenesisConfig,
     KeyPair,
     PrivateKey,
@@ -20,7 +21,7 @@ const { importCashlinks, exportCashlinks } = require('./file-handler');
 const renderCoins = require('./render-coins');
 const renderQrCodes = require('./render-qr-codes');
 const RpcClient = require('./RpcClient');
-const fundCashlinks = require('./fund-cashlinks');
+const { fundCashlinks, claimCashlinks } = require('./cashlink-transaction-handler');
 
 const Config = require('./Config');
 
@@ -29,6 +30,7 @@ const Operation = {
     CHANGE_THEME: 'change-theme',
     CREATE_IMAGES: 'create-images',
     FUND: 'fund',
+    CLAIM: 'claim',
 };
 
 function getCurrentDateString() {
@@ -75,6 +77,16 @@ function createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage, cashlink
         );
     }
     return cashlinks;
+}
+
+async function getRpcClient() {
+    const rpcClient = new RpcClient(Config.RPC_HOST, Config.RPC_PORT);
+    if (!(await rpcClient.isConnected())) throw new Error(`Could not establish an RPC connection on ${Config.RPC_HOST}:`
+        + `${Config.RPC_PORT}. Make sure the Nimiq node is running with enabled RPC.`);
+    try {
+        GenesisConfig[Config.NETWORK]();
+    } catch (e) {}
+    return rpcClient;
 }
 
 async function prompt(question) {
@@ -225,10 +237,7 @@ async function wizardChangeTheme(cashlinks) {
 }
 
 async function wizardFundCashlinks(cashlinks) {
-    const rpcClient = new RpcClient(Config.RPC_HOST, Config.RPC_PORT);
-    if (!(await rpcClient.isConnected())) throw new Error(`Could not establish an RPC connection on ${Config.RPC_HOST}:`
-        + `${Config.RPC_PORT}. Make sure the Nimiq node is running with enabled RPC.`);
-
+    const rpcClient = await getRpcClient();
     const minimumNonFreeFee = 171 * Mempool.TRANSACTION_RELAY_FEE_MIN; // 171 byte (extended tx + cashlink extra data)
     const fee = await prompt(`Funding fees [FREE/paid (${minimumNonFreeFee / 1e5} NIM per Cashlink)]: `) === 'paid'
         ? minimumNonFreeFee
@@ -252,9 +261,23 @@ async function wizardFundCashlinks(cashlinks) {
     }
 
     console.log('\nFunding Cashlinks');
-    GenesisConfig[Config.NETWORK]();
     await fundCashlinks(cashlinks, fee, privateKey, rpcClient);
     console.log('Cashlinks funded.');
+}
+
+async function wizardClaimCashlinks(cashlinks) {
+    const rpcClient = await getRpcClient();
+    const recipientAddress = Address.fromAny(await prompt('Redeem unclaimed Cashlinks to address: '));
+
+    if (await prompt(`Redeeming unclaimed Cashlinks to ${recipientAddress.toUserFriendlyAddress()}, ok? [y/N]: `)
+        !== 'y') {
+        console.log('Not redeeming Cashlinks.');
+        return;
+    }
+
+    console.log('\nRedeeming unclaimed Cashlinks');
+    await claimCashlinks(cashlinks, recipientAddress, rpcClient);
+    console.log('Unclaimed Cashlinks redeemed.');
 }
 
 async function main() {
@@ -303,12 +326,15 @@ async function main() {
         await wizardFundCashlinks(cashlinks);
     }
 
+    if (operations.includes(Operation.CLAIM)) {
+        await wizardClaimCashlinks(cashlinks);
+    }
+
     console.log('\nAll operations finished :)');
 }
 
 main();
 
-// TODO support recollecting unclaimed cashlinks
 // TODO support creating cashlinks without short links
 // TODO error handling
 
