@@ -23,8 +23,8 @@ class RpcClient {
         return this._jsonRpcFetch('getBalance', address.toUserFriendlyAddress());
     }
 
-    async getMempoolTransactions(getTransactionHashesOnly = true) {
-        return this._jsonRpcFetch('mempoolContent', !getTransactionHashesOnly);
+    async getMempoolTransactions(includeTransactions = false) {
+        return this._jsonRpcFetch('mempoolContent', includeTransactions);
     }
 
     async sendTransaction(transaction) {

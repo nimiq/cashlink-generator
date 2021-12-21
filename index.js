@@ -79,14 +79,17 @@ function createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage, cashlink
     return cashlinks;
 }
 
+let _rpcClient = null;
 async function getRpcClient() {
-    const rpcClient = new RpcClient(Config.RPC_HOST, Config.RPC_PORT);
-    if (!(await rpcClient.isConnected())) throw new Error(`Could not establish an RPC connection on ${Config.RPC_HOST}:`
-        + `${Config.RPC_PORT}. Make sure the Nimiq node is running with enabled RPC.`);
-    try {
-        GenesisConfig[Config.NETWORK]();
-    } catch (e) {}
-    return rpcClient;
+    if (!_rpcClient) {
+        _rpcClient = new RpcClient(Config.RPC_HOST, Config.RPC_PORT);
+        try {
+            GenesisConfig[Config.NETWORK]();
+        } catch (e) {}
+    }
+    if (!(await _rpcClient.isConnected())) throw new Error(`Could not establish an RPC connection on ${Config.RPC_HOST}`
+        + `:${Config.RPC_PORT}. Make sure the Nimiq node is running with enabled RPC.`);
+    return _rpcClient;
 }
 
 async function prompt(question) {
@@ -145,6 +148,7 @@ async function promptPrivateKey() {
         // split at whitespace and strip numbers for direct copying from Nimiq Keyguard
         backupWords.push(...line.split(/\d*\s+\d*|\d+/g).filter((word) => !!word));
         if (backupWords.length < 24) return;
+        console.log(); // print new line
         rl.close();
     });
 
@@ -331,6 +335,10 @@ async function main() {
     }
 
     console.log('\nAll operations finished :)');
+    if (operations.includes(Operation.FUND) || operations.includes(Operation.CLAIM)) {
+        console.log('Transactions might still be pending in your local node and waiting to be relayed to other network'
+            + 'nodes. Make sure to check your wallet balance and keep your node running if needed.');
+    }
 }
 
 main();
