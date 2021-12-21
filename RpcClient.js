@@ -27,6 +27,10 @@ class RpcClient {
         return this._jsonRpcFetch('mempoolContent', includeTransactions);
     }
 
+    async getTransactionReceipt(txHash) {
+        return this._jsonRpcFetch('getTransactionReceipt', txHash);
+    }
+
     async sendTransaction(transaction) {
         return this._jsonRpcFetch('sendRawTransaction', BufferUtils.toHex(transaction.serialize()));
     }

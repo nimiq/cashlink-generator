@@ -103,12 +103,30 @@ class TransactionBroadcaster {
                     const blockHeight = await this._rpcClient.getBlockHeight();
                     if (blockHeight !== this._lastBlockHeight) {
                         this._lastBlockHeight = blockHeight;
-                        const mempoolTransactionHashes = new Set(await this._rpcClient.getMempoolTransactions());
-                        for (const [txHash, senderUserFriendlyAddress] of this._senderPerMempoolTransaction) {
-                            if (mempoolTransactionHashes.has(txHash)) continue; // still in mempool
-                            // Deletion during iteration is safe: https://stackoverflow.com/a/35943995
-                            this._removeMempoolTransaction(txHash, senderUserFriendlyAddress);
-                            anyMined = true;
+                        // TODO this probably does not handle rebranching well
+                        if (this._rpcClientSupportsMempool) {
+                            const mempoolTransactionHashes = new Set(await this._rpcClient.getMempoolTransactions());
+                            for (const [txHash, senderUserFriendlyAddress] of this._senderPerMempoolTransaction) {
+                                if (mempoolTransactionHashes.has(txHash)) continue; // still in mempool
+                                // Deletion during iteration is safe: https://stackoverflow.com/a/35943995
+                                this._removeMempoolTransaction(txHash, senderUserFriendlyAddress);
+                                anyMined = true;
+                            }
+                        } else {
+                            // Fallback implementation by fetching our known transactions. This is costly as
+                            // transactions will be requested from peers for nano nodes. First fetch all information,
+                            // then apply changes at once.
+                            const transactionInfos = await Promise.all(
+                                [...this._senderPerMempoolTransaction].map(([txHash, senderUserFriendlyAddress]) =>
+                                    this._rpcClient.getTransactionReceipt(txHash)
+                                        .then((receipt) => [txHash, senderUserFriendlyAddress, !!receipt]),
+                                ),
+                            );
+                            for (const [txHash, senderUserFriendlyAddress, isMined] of transactionInfos) {
+                                if (!isMined) continue;
+                                this._removeMempoolTransaction(txHash, senderUserFriendlyAddress);
+                                anyMined = true;
+                            }
                         }
                     }
                     if (anyMined) {
@@ -154,6 +172,7 @@ class TransactionBroadcaster {
     /** @private */
     constructor(rpcClient) {
         this._rpcClient = rpcClient;
+        this._rpcClientSupportsMempool = true;
         this._broadcastSlotWaitList = [];
         this._mempoolSlotWaitListPerSender = new Map(); // userfriendly address -> array<transaction>
         this._mempoolTransactionsPerSender = new Map(); // userfriendly address -> Set<hex hash>
@@ -163,7 +182,8 @@ class TransactionBroadcaster {
         this._broadcastPromises = new Set();
         // set initial mempool transactions
         this._initializedPromise = rpcClient.getMempoolTransactions(true).then((transactions) =>
-            transactions.forEach(({hash, fromAddress}) => this._addMempoolTransaction(hash, fromAddress)));
+            transactions.forEach(({hash, fromAddress}) => this._addMempoolTransaction(hash, fromAddress)),
+        ).catch(() => this._rpcClientSupportsMempool = false); // this is the case for nano nodes
         // setInterval(() => console.log(
         //     'Broadcast wait list: ',
         //     this._broadcastSlotWaitList.length,
