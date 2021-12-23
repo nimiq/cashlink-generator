@@ -336,8 +336,10 @@ async function main() {
 
     console.log('\nAll operations finished :)');
     if (operations.includes(Operation.FUND) || operations.includes(Operation.CLAIM)) {
-        console.log('Transactions might still be pending in your local node and waiting to be relayed to other network'
-            + 'nodes. Make sure to check your wallet balance and keep your node running if needed.');
+        console.log(
+            'Transactions might still be pending in your local node and waiting to be relayed to other network nodes.\n'
+            + 'Make sure to check your wallet balance and keep your node running if needed.',
+        );
     }
 }
 

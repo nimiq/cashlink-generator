@@ -10,7 +10,14 @@ class TransactionBroadcaster {
     }
 
     async broadcastTransaction(transaction) {
-        // send transaction as soon as MAX_PARALLEL_BROADCASTS and mempool slots per sender allow
+        if (transaction.fee !== 0 && this._isFreeTransaction(transaction)) {
+            console.warn(
+                'Specified fee is too low to qualify as paid transaction. '
+                + `Use at least ${transaction.serializedSize * Mempool.TRANSACTION_RELAY_FEE_MIN} luna.`,
+            );
+        }
+
+        // send transaction as soon as maxParallelBroadcasts and mempool slots per sender allow
         await Promise.all([
             this._initializedPromise,
             this._awaitFreeBroadcastSlot(transaction),
@@ -53,13 +60,25 @@ class TransactionBroadcaster {
 
     async _awaitFreeBroadcastSlot(transaction) {
         await this._initializedPromise;
+        // How many transactions to broadcast at once without waiting for a confirmation (not block inclusion).
+        // This is merely for pushing the transactions to our own node. The node then sends out the transactions
+        // in a throttled fashion itself, see BaseConsensusAgent in core and constants TRANSACTION_RELAY_INTERVAL,
+        // TRANSACTIONS_AT_ONCE, TRANSACTIONS_PER_SECOND, FREE_TRANSACTION_RELAY_INTERVAL, FREE_TRANSACTIONS_AT_ONCE,
+        // FREE_TRANSACTIONS_PER_SECOND.
+        // Consensus.sendTransaction resolves the latest after BaseConsensus.TRANSACTION_RELAY_TIMEOUT in which case
+        // the transaction is kept in the local node and waiting for a later relay. The batch size is chosen such that
+        // we meet the (FREE_)TRANSACTIONS_PER_SECOND limit if we hit the TRANSACTION_RELAY_TIMEOUT.
+        // For free transactions from the same sender, the actual throughput will be limited by the mempool limit.
+        const maxParallelBroadcasts = BaseConsensus.TRANSACTION_RELAY_TIMEOUT / 1000
+            * (this._isFreeTransaction(transaction)
+                ? BaseConsensusAgent.FREE_TRANSACTIONS_PER_SECOND
+                : BaseConsensusAgent.TRANSACTIONS_PER_SECOND);
         // Queue up for a slot, even if there are slots available right away, to reserve it. Note that as there is no
         // guarantee on async execution order, multiple slots might become available at once, therefore do not just
         // check the first wait list position.
         this._broadcastSlotWaitList.push(transaction);
         while (
-            this._broadcastSlotWaitList.indexOf(transaction)
-            >= TransactionBroadcaster.MAX_PARALLEL_BROADCASTS - this._broadcastPromises.size
+            this._broadcastSlotWaitList.indexOf(transaction) >= maxParallelBroadcasts - this._broadcastPromises.size
         ) {
             await Promise.race(this._broadcastPromises);
         }
@@ -67,10 +86,7 @@ class TransactionBroadcaster {
 
     async _awaitFreeMempoolSlot(transaction) {
         await this._initializedPromise;
-        const isFree = transaction.feePerByte < Mempool.TRANSACTION_RELAY_FEE_MIN;
-        if (transaction.fee !== 0 && isFree) console.warn('Specified fee is too low to qualify as paid transaction. '
-            + `Use at least ${transaction.serializedSize * Mempool.TRANSACTION_RELAY_FEE_MIN} luna.`);
-        const maxMempoolSlots = isFree
+        const maxMempoolSlots = this._isFreeTransaction(transaction)
             ? Mempool.FREE_TRANSACTIONS_PER_SENDER_MAX
             : Mempool.TRANSACTIONS_PER_SENDER_MAX;
         const senderUserFriendlyAddress = transaction.sender.toUserFriendlyAddress();
@@ -81,10 +97,9 @@ class TransactionBroadcaster {
         }
         // Queue up for a slot, even if there are slots available right away, to reserve it. Note that we could could
         // sort transactions in the queue such that free transactions get broadcast as soon as a free slot is available
-        // and take precedence over paid slots. However, we want to retain the original order. Also, in reality, we're
-        // not mixing free and paid transactions in this program. Also note that if multiple transactions get mined,
-        // multiple slots become available at once and free and paid slots at different times, therefore do not just
-        // check the first wait list position.
+        // and take precedence over paid slots. But, in reality, we're not mixing free and paid transactions in this
+        // program. Also note that if multiple transactions get mined, multiple slots become available at once and free
+        // and paid slots at different times, therefore do not just check the first wait list position.
         senderMempoolSlotWaitList.push(transaction);
         while (
             senderMempoolSlotWaitList.indexOf(transaction)
@@ -169,6 +184,10 @@ class TransactionBroadcaster {
         return senderMempoolTransactions ? senderMempoolTransactions.size : 0;
     }
 
+    _isFreeTransaction(transaction) {
+        return transaction.feePerByte < Mempool.TRANSACTION_RELAY_FEE_MIN;
+    }
+
     /** @private */
     constructor(rpcClient) {
         this._rpcClient = rpcClient;
@@ -196,15 +215,5 @@ class TransactionBroadcaster {
         // ), 5000);
     }
 }
-// How many transactions to broadcast in parallel without waiting for a confirmation (not block inclusion). This
-// is merely for pushing the transactions to our own node. The node then sends out the transactions in a throttled
-// fashion itself, see BaseConsensusAgent in core and constants TRANSACTION_RELAY_INTERVAL, TRANSACTIONS_AT_ONCE,
-// TRANSACTIONS_PER_SECOND, FREE_TRANSACTION_RELAY_INTERVAL, FREE_TRANSACTIONS_AT_ONCE, FREE_TRANSACTIONS_PER_SECOND.
-// Consensus.sendTransaction resolves the latest after BaseConsensus.TRANSACTION_RELAY_TIMEOUT in which case the
-// transaction is kept in the local node and waiting for a later relay. The batch size is chosen such that we meet
-// the TRANSACTION_PER_SECOND limit if we hit the TRANSACTION_RELAY_TIMEOUT.
-// For free transactions the actual througput will be rather limited by the mempool limit.
-TransactionBroadcaster.MAX_PARALLEL_BROADCASTS = BaseConsensus.TRANSACTION_RELAY_TIMEOUT / 1000
-    * BaseConsensusAgent.TRANSACTIONS_PER_SECOND;
 
 module.exports = TransactionBroadcaster;
