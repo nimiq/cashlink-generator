@@ -31,6 +31,10 @@ class RpcClient {
         return this._jsonRpcFetch('getTransactionReceipt', txHash);
     }
 
+    async getTransactionsByAddress(address) {
+        return this._jsonRpcFetch('getTransactionsByAddress', address.toUserFriendlyAddress());
+    }
+
     async sendTransaction(transaction) {
         return this._jsonRpcFetch('sendRawTransaction', BufferUtils.toHex(transaction.serialize()));
     }

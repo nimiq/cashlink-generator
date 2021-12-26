@@ -22,6 +22,7 @@ const renderCoins = require('./render-coins');
 const renderQrCodes = require('./render-qr-codes');
 const RpcClient = require('./RpcClient');
 const { fundCashlinks, claimCashlinks } = require('./cashlink-transaction-handler');
+const { createStatistics } = require('./cashlink-statistics-handler');
 
 const Config = require('./Config');
 
@@ -31,6 +32,7 @@ const Operation = {
     CREATE_IMAGES: 'create-images',
     FUND: 'fund',
     CLAIM: 'claim',
+    STATISTICS: 'statistics',
 };
 
 function getCurrentDateString() {
@@ -284,8 +286,29 @@ async function wizardClaimCashlinks(cashlinks) {
     console.log('Unclaimed Cashlinks redeemed.');
 }
 
+async function wizardCreateStatistics(cashlinks, folder) {
+    const rpcClient = await getRpcClient();
+    const reclaimUserFriendlyAddress = await prompt('Address cashlinks have been reclaimed to [default: none]: ');
+    const reclaimAddress = reclaimUserFriendlyAddress
+        ? Address.fromAny(reclaimUserFriendlyAddress)
+        : null;
+    const timeZone = await prompt('Timezone to use for claims-per-day statistic [default: "UTC", '
+        + `your timezone: "${Intl.DateTimeFormat().resolvedOptions().timeZone}"]: `) || 'UTC';
+
+    console.log('\nGenerating Cashlink statistics');
+    const statistics = await createStatistics(cashlinks, reclaimAddress, timeZone, rpcClient);
+    console.log('Cashlink statistics generated.');
+
+    console.log(`\nStatistics:\n${statistics}`);
+
+    const file = `${folder || '.'}/${getCurrentDateString()} statistics.txt`.replace(__dirname, '.');
+    if (await prompt(`Do you want to export the statistics to ${file}? [Y/n]: `) === 'n') return;
+    fs.writeFileSync(file, statistics);
+    console.log(`Statistics exported to ${file}.`);
+}
+
 async function main() {
-    console.log('Welcome to the printable cashlink generator!\n');
+    console.log('Welcome to the cashlink generator!\n');
 
     let cashlinks, shortLinks, imageFiles, folder, operations;
     const importResult = await wizardImportCashlinks();
@@ -332,6 +355,10 @@ async function main() {
 
     if (operations.includes(Operation.CLAIM)) {
         await wizardClaimCashlinks(cashlinks);
+    }
+
+    if (operations.includes(Operation.STATISTICS)) {
+        await wizardCreateStatistics(cashlinks, folder);
     }
 
     console.log('\nAll operations finished :)');
