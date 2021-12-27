@@ -1,8 +1,6 @@
 const Config = {
     NETWORK: 'main',
 
-    SHORT_LINK_BASE_URL: 'https://nim.id/',
-
     TOKEN_LENGTH: 6, // length in characters
     SECRET_SALT_FILE: './secret/salt',
 

@@ -67,6 +67,12 @@ For creating and funding new Cashlinks.
 - Specify the value in NIM per Cashlink.
 - Specify a custom message or use the default.
 - Specify a theme by name or number or leave empty to not specify a theme.
+- Specify a short link base URL, if you plan to create mappings on your server of short URLs based on a domain owned by
+  you to the actual Cashlinks. The short URLs are generated as `<base url><6 digit random base64 cashlink token>`. To
+  avoid your Cashlinks getting claimed in bulk via brute forcing, your server should have some form of rate limiting in
+  place. The default short link base URL is "https://nim.id/", which is a Nimiq owned domain. You can specify "none" to
+  opt out of short link creation. If short links are generated, these are the content of generated QR codes, otherwise
+  they contain full Cashlinks.
 - Choose whether Cashlinks should be rendered as individual QR code images or printable pages of hexagon coins.
 - Cashlinks and images should now have been exported. Check the exported files before continuing with funding the
   created Cashlinks.

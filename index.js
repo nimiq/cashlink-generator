@@ -186,26 +186,32 @@ async function wizardCreateCashlinks() {
     const cashlinkMessage = await prompt(`Cashlink message [default: "${defaultCashlinkMessage}"]: `)
         || defaultCashlinkMessage;
     const cashlinkTheme = await promptCashlinkTheme();
+    const defaultShortLinkBaseUrl = 'https://nim.id/';
+    const shortLinkBaseUrl = (await prompt(`Short link base url ["none"/URL, default: "${defaultShortLinkBaseUrl}"]: `)
+        || defaultShortLinkBaseUrl).replace(/(?<!^none|[=?&#])\/?$/, '/');
 
     console.log('\nCreating Cashlinks');
     const cashlinks = createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage, cashlinkTheme);
-    const shortLinks = new Map([...cashlinks.keys()]
-        .map((token) => [token, `${Config.SHORT_LINK_BASE_URL}${token}`]));
+    const shortLinks = shortLinkBaseUrl !== 'none'
+        ? new Map([...cashlinks.keys()].map((token) => [token, `${shortLinkBaseUrl}${token}`]))
+        : null;
     console.log(`${cashlinks.size} Cashlinks created.\n`);
 
     return { cashlinks, shortLinks };
 }
 
-async function wizardCreateImages(shortLinks, folder) {
+async function wizardCreateImages(cashlinks, shortLinks, folder) {
     const format = await prompt('Choose an output format [QR/coin]: ')
     let imageFiles;
+    const links = shortLinks
+        || new Map([...cashlinks].map(([token, cashlink]) => [token, cashlink.render()]));
     if (format !== 'coin') {
         console.log('\nRendering QR Codes');
-        imageFiles = renderQrCodes(shortLinks, folder);
+        imageFiles = renderQrCodes(links, folder);
         console.log('QR Codes rendered.\n');
     } else {
         console.log('\nRendering CashCoins');
-        imageFiles = renderCoins(shortLinks, folder);
+        imageFiles = renderCoins(links, folder);
         console.log('CashCoins rendered.\n');
     }
     return imageFiles;
@@ -326,7 +332,7 @@ async function main() {
 
     if (operations.includes(Operation.CREATE_IMAGES)) {
         const oldImageFiles = imageFiles;
-        imageFiles = await wizardCreateImages(shortLinks, folder);
+        imageFiles = await wizardCreateImages(cashlinks, shortLinks, folder);
         shouldExport = shouldExport || !oldImageFiles
             || oldImageFiles.values().next().value !== imageFiles.values().next().value;
     }
@@ -371,7 +377,3 @@ async function main() {
 }
 
 main();
-
-// TODO support creating cashlinks without short links
-// TODO error handling
-
