@@ -1,7 +1,7 @@
 {
-  "name": "cashcoins",
-  "version": "0.0.1",
-  "description": "Generator for printable cashlinks",
+  "name": "cashlink-generator",
+  "version": "1.0.0",
+  "description": "Bulk Cashlink Creation and Management Tool",
   "main": "index.js",
   "author": "Nimiq, nimiq.com",
   "license": "MIT",
