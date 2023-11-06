@@ -50,7 +50,7 @@ function getCurrentDateString() {
 function createFolder() {
     const folder = `${__dirname}/generated-cashlinks/${getCurrentDateString()}`;
     if (!fs.existsSync(folder)){
-        fs.mkdirSync(folder);
+        fs.mkdirSync(folder, { recursive: true });
     }
     return folder;
 }
