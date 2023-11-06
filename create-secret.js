@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 const { BufferUtils } = require('@nimiq/core');
 const { SECRET_SALT_FILE } = require('./Config');
@@ -12,6 +13,7 @@ function createSecret() {
     }
     const secretBytes = crypto.randomBytes(SECRET_SALT_LENGTH);
     const secretBase64 = BufferUtils.toBase64(secretBytes);
+    fs.mkdirSync(path.dirname(path.join(__dirname, SECRET_SALT_FILE)), { recursive: true });
     fs.writeFileSync(SECRET_SALT_FILE, secretBase64);
     console.log(`Secret salt file created at ${SECRET_SALT_FILE}`);
 }
