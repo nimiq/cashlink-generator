@@ -168,6 +168,7 @@ function drawFront(centerX, centerY, link, canvas, context) {
     context.fillText(header, centerX - headerWidth / 2, centerY - QR_SIZE / 2 - .5 * HEADER_FONT_SIZE);
     // render link
     const simplifiedLink = link.replace(/^http(s)?:\/\//, '');
+    if (simplifiedLink.length > 20) return; // only render short links
     context.font = `${LINK_FONT_SIZE}px "Fira Mono"`;
     const linkWidth = context.measureText(simplifiedLink).width;
     context.fillText(simplifiedLink, centerX - linkWidth / 2, centerY + QR_SIZE / 2 + 2.2 * LINK_FONT_SIZE);
