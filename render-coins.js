@@ -149,7 +149,7 @@ function drawHexagon(centerX, centerY, radius, borderRadius, context) {
     context.restore();
 }
 
-function drawFront(centerX, centerY, link, canvas, context) {
+function drawFront(centerX, centerY, cashlink, link, canvas, context) {
     drawHexagon(centerX, centerY, HEXAGON_RADIUS, BORDER_RADIUS, context);
 
     QrCode.render({
@@ -162,7 +162,7 @@ function drawFront(centerX, centerY, link, canvas, context) {
 
     context.fillStyle = '#1F2348';
     // render header
-    const header = '1000 NIM';
+    const header = `${cashlink.value / 1e5} NIM`;
     context.font = `${HEADER_FONT_SIZE}px Muli-SemiBold`;
     const headerWidth = context.measureText(header).width;
     context.fillText(header, centerX - headerWidth / 2, centerY - QR_SIZE / 2 - .5 * HEADER_FONT_SIZE);
@@ -237,10 +237,10 @@ function drawBack(centerX, centerY, size, context) {
     context.restore();
 }
 
-function renderCoins(links, folder, side = 'both') {
+function renderCoins(cashlinks, shortLinks, folder, side = 'both') {
     if (side === 'both') {
-        renderCoins(links, folder, 'back');
-        return renderCoins(links, folder, 'front');
+        renderCoins(cashlinks, shortLinks, folder, 'back');
+        return renderCoins(cashlinks, shortLinks, folder, 'front');
     }
 
     const filenames = new Map();
@@ -270,7 +270,7 @@ function renderCoins(links, folder, side = 'both') {
         pageMarginY = (CANVAS_HEIGHT - renderHeight) / 2;
     }
 
-    for (const [token, link] of links) {
+    for (const token of cashlinks.keys()) {
         centerX += stepX;
         if (centerX > CANVAS_WIDTH - pageMarginX - HEXAGON_RADIUS) {
             // advance one row
@@ -294,7 +294,9 @@ function renderCoins(links, folder, side = 'both') {
         }
 
         if (side === 'front') {
-            drawFront(centerX, centerY, link, canvas, context);
+            const cashlink = cashlinks.get(token);
+            const link = shortLinks ? shortLinks.get(token) : cashlink.render();
+            drawFront(centerX, centerY, cashlink, link, canvas, context);
             filenames.set(token, `cashcoins_${page}.svg`);
         } else {
             drawBack(centerX, centerY, BACK_LOGO_SIZE, context);

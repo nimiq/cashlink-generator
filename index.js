@@ -203,15 +203,15 @@ async function wizardCreateCashlinks() {
 async function wizardCreateImages(cashlinks, shortLinks, folder) {
     const format = await prompt('Choose an output format [QR/coin]: ')
     let imageFiles;
-    const links = shortLinks
-        || new Map([...cashlinks].map(([token, cashlink]) => [token, cashlink.render()]));
     if (format !== 'coin') {
         console.log('\nRendering QR Codes');
+        const links = shortLinks
+            || new Map([...cashlinks].map(([token, cashlink]) => [token, cashlink.render()]));
         imageFiles = renderQrCodes(links, folder);
         console.log('QR Codes rendered.\n');
     } else {
         console.log('\nRendering CashCoins');
-        imageFiles = renderCoins(links, folder);
+        imageFiles = renderCoins(cashlinks, shortLinks, folder);
         console.log('CashCoins rendered.\n');
     }
     return imageFiles;
