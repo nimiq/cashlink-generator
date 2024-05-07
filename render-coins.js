@@ -3,8 +3,13 @@ const fs = require('fs');
 const QrCode = require('./qr-code');
 
 // US letter format at 400 dpi
-const CANVAS_WIDTH = 8.5 * 400;
-const CANVAS_HEIGHT = 11 * 400;
+// const CANVAS_WIDTH = 8.5 * 400;
+// const CANVAS_HEIGHT = 11 * 400;
+
+// DIN A4 at 400 dpi
+const CANVAS_WIDTH = 8.27 * 400;
+const CANVAS_HEIGHT = 11.6 * 400;
+
 const HEXAGON_MARGIN = 0;
 const HEXAGON_RADIUS = 400;
 const BORDER_RADIUS = HEXAGON_RADIUS / 50 * 9;

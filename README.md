@@ -132,6 +132,8 @@ For creating statistics on previously created Cashlinks.
 For (re)creating images for previously created Cashlinks. This way, you can create both image types for a Cashlink batch
 or change the image type.
 
+- Make changes to the configuration constants in `render-qr-codes.js` or `render-coins.js`, if desired, to modify
+  properties like size or layout.
 - Load a previously generated Cashlink `.csv` file by specifying its file path.
 - Choose `create-images` as operation.
 - Choose whether Cashlinks should be rendered as individual QR code images or printable pages of hexagon coins.
