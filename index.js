@@ -183,8 +183,8 @@ async function wizardCreateCashlinks() {
     const cashlinkValue = Math.round(parseFloat(await prompt('Cashlink value in NIM: ')) * 1e5);
     if (Number.isNaN(cashlinkValue) || cashlinkValue <= 0) throw new Error('Invalid cashlink value');
     const defaultCashlinkMessage = 'Welcome to Nimiq - Crypto for Humans';
-    const cashlinkMessage = await prompt(`Cashlink message [default: "${defaultCashlinkMessage}"]: `)
-        || defaultCashlinkMessage;
+    const cashlinkMessage = (await prompt(`Cashlink message ["none"/message, default: "${defaultCashlinkMessage}"]: `)
+        || defaultCashlinkMessage).replace(/^none$/, '');
     const cashlinkTheme = await promptCashlinkTheme();
     const defaultShortLinkBaseUrl = 'https://nim.id/';
     const shortLinkBaseUrl = (await prompt(`Short link base url ["none"/URL, default: "${defaultShortLinkBaseUrl}"]: `)
@@ -219,8 +219,8 @@ async function wizardCreateImages(cashlinks, shortLinks, folder) {
 
 async function wizardChangeMessage(cashlinks) {
     const oldCashlinkMessage = cashlinks.values().next().value.message;
-    const newCashlinkMessage = await prompt(`New Cashlink message [old message: "${oldCashlinkMessage}"]: `)
-        || oldCashlinkMessage;
+    const newCashlinkMessage = (await prompt(`New Cashlink message ["none"/message, old message: "${oldCashlinkMessage}"]: `)
+        || oldCashlinkMessage).replace(/^none$/, '');
     if (oldCashlinkMessage === newCashlinkMessage) {
         console.log('Keeping the old Cashlink message.')
         return false;
