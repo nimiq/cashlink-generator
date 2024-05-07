@@ -7,8 +7,9 @@
   "license": "MIT",
   "dependencies": {
     "@nimiq/core": "^1.6.2",
-    "@nimiq/hub-api": "^1.5.1",
-    "@nimiq/utils": "^0.8.2",
+    "@nimiq/hub-api": "^1.8.0",
+    "@nimiq/utils": "^0.11.1",
     "canvas": "^2.11.2"
-  }
+  },
+  "packageManager": "yarn@1.22.19"
 }
