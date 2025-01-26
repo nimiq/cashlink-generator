@@ -1,21 +1,71 @@
-const { createCanvas } = require('canvas');
-const fs = require('fs');
-const readline = require('readline');
-const QrCode = require('./qr-code');
+/**
+ * Nimiq QR Code Generator
+ * Generates SVG QR codes with Nimiq styling and gradient options.
+ * 
+ * Features:
+ * - Creates SVG-based QR codes
+ * - Supports Nimiq's brand colors and gradients
+ * - Configurable error correction levels
+ * - Custom fill options including radial/linear gradients
+ * - CLI interface for single QR code generation
+ * 
+ * The generator supports both programmatic usage and CLI operation.
+ */
 
+import { createCanvas, Canvas, CanvasRenderingContext2D } from 'canvas';
+import fs from 'fs';
+import readline from 'readline';
+import QrCode from './qr-code';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+/**
+ * Canvas size and padding configuration
+ */
 const QR_SIZE = 400;
 const QR_PADDING = 60;
 
-function initCanvas() {
+/**
+ * Interface for canvas initialization result
+ */
+interface CanvasInit {
+    canvas: Canvas;
+    context: CanvasRenderingContext2D;
+}
+
+/**
+ * QR code rendering options
+ */
+interface QROptions {
+    fill?: string | {
+        type: 'radial-gradient' | 'linear-gradient';
+        position: number[];
+        colorStops: [number, string][];
+    };
+    ecLevel?: 'L' | 'M' | 'Q' | 'H';
+    [key: string]: any;
+}
+
+/**
+ * Initializes a canvas for QR code rendering
+ * @returns Canvas and context configured for best quality
+ */
+function initCanvas(): CanvasInit {
     const canvasSize = QR_SIZE + 2 * QR_PADDING;
-    let canvas = createCanvas(canvasSize, canvasSize, 'svg');
-    let context = canvas.getContext('2d');
+    const canvas = createCanvas(canvasSize, canvasSize, 'svg');
+    const context = canvas.getContext('2d');
     context.quality = 'best';
-    context.patternQuality = 'best'; // Affects pattern (gradient, image, etc.) rendering quality.
+    context.patternQuality = 'best';
     return { canvas, context };
 }
 
-function createQrCode(filepath, text, { fill= '#1F2348', ...remainingOptions } = {}) {
+/**
+ * Creates a single QR code with specified options
+ * @param filepath - Output file path
+ * @param text - Content to encode in QR code
+ * @param options - Rendering options including fill and error correction
+ */
+function createQrCode(filepath: string, text: string, { fill = '#1F2348', ...remainingOptions }: QROptions = {}): void {
     const { canvas } = initCanvas();
     QrCode.render({
         size: QR_SIZE,
@@ -28,8 +78,15 @@ function createQrCode(filepath, text, { fill= '#1F2348', ...remainingOptions } =
     fs.writeFileSync(filepath, canvas.toBuffer());
 }
 
-function renderQrCodes(links, folder, options = {}) {
-    const filenames = new Map();
+/**
+ * Renders multiple QR codes from a map of links
+ * @param links - Map of tokens to URLs
+ * @param folder - Output directory for generated files
+ * @param options - Rendering options
+ * @returns Map of tokens to generated filenames
+ */
+function renderQrCodes(links: Map<string, string>, folder: string, options: QROptions = {}): Map<string, string> {
+    const filenames = new Map<string, string>();
     for (const [token, link] of links) {
         const filename = `qr-${token}.svg`;
         filenames.set(token, filename);
@@ -38,11 +95,11 @@ function renderQrCodes(links, folder, options = {}) {
     return filenames;
 }
 
-// Check whether we're run as an imported module or directly via `node render-qr-codes.js`.
-// See https://nodejs.org/docs/latest/api/modules.html#modules_accessing_the_main_module
-if (require.main === module) {
-    // We're run as `node render-qr-codes.js`.
-    // Provide a little utility for rendering a single qr code in Nimiq style.
+export default renderQrCodes;
+
+// CLI interface
+if (import.meta.url === `file://${process.argv[1]}`) {
+    // We're run directly
     (async () => {
         console.log('Create a Nimiq style QR code by providing its content and filename.');
         const rl = readline.createInterface({
@@ -50,31 +107,38 @@ if (require.main === module) {
             output: process.stdout,
             terminal: true,
         });
-        const content = await new Promise((resolve) => rl.question('QR Content: ', resolve));
-        const color = await new Promise((resolve) =>
+
+        const content = await new Promise<string>((resolve) => rl.question('QR Content: ', resolve));
+        const color = await new Promise<string>((resolve) =>
             rl.question('Color (light-blue/indigo; default indigo): ', resolve)) || 'indigo';
-        const errorCorrection = await new Promise((resolve) =>
+        const errorCorrection = await new Promise<string>((resolve) =>
             rl.question('Error Correction (L/M/Q/H; default M): ', resolve)) || 'M';
+            
         let filename = `${content.replace(/https?:\/\//, '').replace(/[^A-Z0-9]+/gi, '-')}-${color}-${errorCorrection}`;
-        filename = await new Promise((resolve) => rl.question(`Filename (default ${filename}): `, resolve))
+        filename = await new Promise<string>((resolve) => rl.question(`Filename (default ${filename}): `, resolve))
             || filename;
-        const filepath = `${__dirname}/${filename}`.replace(/(\.svg)?$/, '.svg');
+            
+        const currentDir = dirname(fileURLToPath(import.meta.url));
+        const qrDir = join(currentDir, '..', 'generated-qr');
+        
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(qrDir)) {
+            fs.mkdirSync(qrDir, { recursive: true });
+        }
+        
+        const filepath = join(qrDir, filename).replace(/(\.svg)?$/, '.svg');
         rl.close();
+        
         createQrCode(filepath, content, {
             fill: {
                 type: 'radial-gradient',
-                // circle centered in bottom right corner with radius of the size of qr code diagonal
                 position: [1, 1, 0, 1, 1, Math.sqrt(2)],
                 colorStops: color === 'light-blue'
                     ? [[0, '#265DD7'], [1, '#0582CA']]
                     : [[0, '#260133'], [1, '#1F2348']],
             },
-            ecLevel: errorCorrection,
+            ecLevel: errorCorrection as 'L' | 'M' | 'Q' | 'H',
         });
         console.log(`QR code saved to ${filepath}.`);
     })();
-} else {
-    // We're an imported module.
-    module.exports = renderQrCodes;
 }
-

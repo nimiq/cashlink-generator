@@ -1,4 +1,4 @@
-// Taken from https://github.com/nimiq/qr-encoder but with small changes and exported as node module
+//@ts-nocheck
 
 'use strict';
 let qrCodeGenerator = null;
@@ -1458,4 +1458,5 @@ QrCode['render'] = QrCode.render;
     return qrcode; // eslint-disable-line no-undef
 }()));
 
-module.exports = QrCode;
+// Change export to properly export QrCode
+export default QrCode;

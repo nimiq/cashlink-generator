@@ -1,6 +1,21 @@
-const { createCanvas, registerFont } = require('canvas');
-const fs = require('fs');
-const QrCode = require('./qr-code');
+/**
+ * Nimiq Cashlink Coin Renderer
+ * Generates printable hexagonal coin designs with QR codes for Nimiq cashlinks.
+ * 
+ * Features:
+ * - Creates SVG-based coin designs
+ * - Supports both front and back side rendering
+ * - Customizable hexagon size and layout
+ * - QR code integration
+ * - Support for compact and standard layouts
+ * 
+ * The renderer supports both single coin generation and batch processing.
+ */
+
+import { createCanvas, registerFont, Canvas, CanvasRenderingContext2D } from 'canvas';
+import fs from 'fs';
+import { Cashlink } from './cashlink';
+import QrCode from './qr-code';
 
 // US letter format at 400 dpi
 // const CANVAS_WIDTH = 8.5 * 400;
@@ -21,29 +36,63 @@ const BACK_LOGO_SIZE = calculateHexHeight(HEXAGON_RADIUS) * (1 - 1 / 1.618); // 
 const RENDER_COMPACT = false;
 const RENDER_OUTLINE_ONLY = true;
 
+interface Point {
+    start: [number, number];
+    end: [number, number];
+}
+
+interface Arc {
+    center: [number, number];
+    startAngle: number;
+    endAngle: number;
+}
+
 registerFont('fonts/Muli.ttf', { family: 'Muli' });
 registerFont('fonts/Muli-SemiBold.ttf', { family: 'Muli-SemiBold' });
 registerFont('fonts/FiraMono-Regular.ttf', { family: 'Fira Mono' });
 
-function initCanvas() {
-    let canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT, 'svg');
-    let context = canvas.getContext('2d');
+/**
+ * Initializes the canvas with proper settings
+ * @returns Canvas and context with best quality settings
+ */
+function initCanvas(): { canvas: Canvas; context: CanvasRenderingContext2D } {
+    const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT, 'svg');
+    const context = canvas.getContext('2d');
     context.quality = 'best';
-    context.patternQuality = 'best'; // Affects pattern (gradient, image, etc.) rendering quality.
+    context.patternQuality = 'best';
     return { canvas, context };
 }
 
-function calculateHexHeight(hexRadius) {
+/**
+ * Calculates the height of a hexagon given its radius
+ * @param hexRadius - Radius of the hexagon
+ * @returns Height of the hexagon
+ */
+function calculateHexHeight(hexRadius: number): number {
     return Math.sqrt(3) * hexRadius;
 }
 
-function drawHexagon(centerX, centerY, radius, borderRadius, context) {
+/**
+ * Draws a hexagonal shape with rounded corners
+ * @param centerX - X coordinate of hexagon center
+ * @param centerY - Y coordinate of hexagon center
+ * @param radius - Radius of the hexagon
+ * @param borderRadius - Radius of corner rounding
+ * @param context - Canvas rendering context
+ */
+function drawHexagon(
+    centerX: number,
+    centerY: number,
+    radius: number,
+    borderRadius: number,
+    context: CanvasRenderingContext2D
+): void {
     // Inspired by nimiqode HexagonRing.
     // Note that the radius is the same as the full side lengths.
     const height = calculateHexHeight(radius);
 
-    // Corners of the hexagon if it wouldn't be rounded.
-    const virtualCorners = [
+    // Explicitly type corners as array of tuples
+    const virtualCorners: [number, number][] = [
         [centerX + radius / 2, centerY + height / 2], // right bottom
         [centerX + radius, centerY + 0], // right center
         [centerX + radius / 2, centerY + -height / 2], // right top
@@ -68,19 +117,19 @@ function drawHexagon(centerX, centerY, radius, borderRadius, context) {
     const cornerArcOffset = borderRadius / Math.cos(Math.PI / 6); // line from virtual corner to arc center
     const relativeCornerArcOffset = cornerArcOffset / radius;
 
-    // compute lines
-    const lines = [];
+    // compute lines with explicit tuple typing
+    const lines: Point[] = [];
     for (let i = 0; i < 6; ++i) {
         const j = (i + 1) % 6;
-        const lineDelta = [
+        const lineDelta: [number, number] = [
             virtualCorners[j][0] - virtualCorners[i][0],
             virtualCorners[j][1] - virtualCorners[i][1],
         ];
-        const start = [
+        const start: [number, number] = [
             virtualCorners[i][0] + relativeSideOffset * lineDelta[0],
             virtualCorners[i][1] + relativeSideOffset * lineDelta[1],
         ];
-        const end = [
+        const end: [number, number] = [
             virtualCorners[j][0] - relativeSideOffset * lineDelta[0],
             virtualCorners[j][1] - relativeSideOffset * lineDelta[1],
         ];
@@ -88,7 +137,7 @@ function drawHexagon(centerX, centerY, radius, borderRadius, context) {
     }
 
     // to convert arc points to angles
-    function arcPointToAngle([x, y], [centerX, centerY], radius, startAngle) {
+    function arcPointToAngle([x, y]: [number, number], [centerX, centerY]: [number, number], radius: number, startAngle?: number): number {
         let angle = Math.acos((x - centerX) / radius);
         // Note that the solution is not unique (e.g. points (3,2) and (3,-2) have same x and thus the same solution).
         // Also due to the symmetry of cos, multiple angles have the same cos value and thus acos is not unique.
@@ -109,15 +158,16 @@ function drawHexagon(centerX, centerY, radius, borderRadius, context) {
     }
 
     // compute arcs
-    const arcs = [];
+    const arcs: Arc[] = [];
     for (let i = 0; i < 6; ++i) {
         const j = (i + 1) % 6;
-        const center = [
+        const center: [number, number] = [
             virtualCorners[j][0] - relativeCornerArcOffset * (virtualCorners[j][0] - centerX),
             virtualCorners[j][1] - relativeCornerArcOffset * (virtualCorners[j][1] - centerY),
-        ];
-        const startAngle = arcPointToAngle(lines[i].end, center, borderRadius);
-        const endAngle = arcPointToAngle(lines[j].start, center, borderRadius);
+        ] as [number, number];
+        
+        const startAngle = arcPointToAngle(lines[i].end as [number, number], center, borderRadius);
+        const endAngle = arcPointToAngle(lines[j].start as [number, number], center, borderRadius);
         arcs.push({ center, startAngle, endAngle });
     }
 
@@ -142,7 +192,7 @@ function drawHexagon(centerX, centerY, radius, borderRadius, context) {
         context.lineWidth = 5;
         context.stroke();
     } else {
-        const gradientFill = new context.createRadialGradient(
+        const gradientFill = context.createRadialGradient(
             virtualCorners[0][0], virtualCorners[0][1], 0,
             virtualCorners[0][0], virtualCorners[0][1], 2 * radius,
         );
@@ -154,7 +204,23 @@ function drawHexagon(centerX, centerY, radius, borderRadius, context) {
     context.restore();
 }
 
-function drawFront(centerX, centerY, cashlink, link, canvas, context) {
+/**
+ * Renders the front side of a coin with QR code and text
+ * @param centerX - X coordinate of coin center
+ * @param centerY - Y coordinate of coin center
+ * @param cashlink - Cashlink object containing value and other details
+ * @param link - URL or short link to encode in QR code
+ * @param canvas - Canvas to render on
+ * @param context - Canvas rendering context
+ */
+function drawFront(
+    centerX: number,
+    centerY: number,
+    cashlink: Cashlink,
+    link: string,
+    canvas: Canvas,
+    context: CanvasRenderingContext2D
+): void {
     drawHexagon(centerX, centerY, HEXAGON_RADIUS, BORDER_RADIUS, context);
 
     QrCode.render({
@@ -179,7 +245,19 @@ function drawFront(centerX, centerY, cashlink, link, canvas, context) {
     context.fillText(simplifiedLink, centerX - linkWidth / 2, centerY + QR_SIZE / 2 + 2.2 * LINK_FONT_SIZE);
 }
 
-function drawBack(centerX, centerY, size, context) {
+/**
+ * Renders the back side of a coin with Nimiq logo
+ * @param centerX - X coordinate of coin center
+ * @param centerY - Y coordinate of coin center
+ * @param size - Size of the logo
+ * @param context - Canvas rendering context
+ */
+function drawBack(
+    centerX: number,
+    centerY: number,
+    size: number,
+    context: CanvasRenderingContext2D
+): void {
     // drawHexagon(centerX, centerY, HEXAGON_RADIUS, BORDER_RADIUS, context);
 
     const logoBaseWidth = 38;
@@ -190,11 +268,11 @@ function drawBack(centerX, centerY, size, context) {
     const dX = centerX - (scale * logoBaseWidth / 2);
     const dY = centerY - (scale * logoBaseHeight / 2);
 
-    function transformX(x) {
+    function transformX(x: string): number {
         return parseFloat(x) * scale + dX;
     }
 
-    function transformY(y) {
+    function transformY(y: string): number {
         return parseFloat(y) * scale + dY;
     }
 
@@ -210,7 +288,7 @@ function drawBack(centerX, centerY, size, context) {
         'g'
     );
     let matchResult;
-    let position;
+    let position: [number, number] = [0, 0];
     while ((matchResult = regex.exec(logoBasePath)) !== null) {
         let [match, ...params] = matchResult;
         params = params.filter((param) => param !== undefined);
@@ -242,13 +320,27 @@ function drawBack(centerX, centerY, size, context) {
     context.restore();
 }
 
-function renderCoins(cashlinks, shortLinks, folder, side = 'both') {
+/**
+ * Main function for rendering coins
+ * Creates SVG files for both front and back sides of coins
+ * @param cashlinks - Map of cashlink tokens to Cashlink objects
+ * @param shortLinks - Optional map of short links
+ * @param folder - Output folder for generated files
+ * @param side - Which sides to render ('both', 'front', or 'back')
+ * @returns Map of token to generated image filenames
+ */
+export function renderCoins(
+    cashlinks: Map<string, Cashlink>,
+    shortLinks: Map<string, string> | null,
+    folder: string,
+    side: 'both' | 'front' | 'back' = 'both'
+): Map<string, string> {
     if (side === 'both') {
         renderCoins(cashlinks, shortLinks, folder, 'back');
         return renderCoins(cashlinks, shortLinks, folder, 'front');
     }
 
-    const filenames = new Map();
+    const filenames = new Map<string, string>();
     let { canvas, context } = initCanvas();
 
     const hexagonHeight = calculateHexHeight(HEXAGON_RADIUS);
@@ -300,7 +392,13 @@ function renderCoins(cashlinks, shortLinks, folder, side = 'both') {
 
         if (side === 'front') {
             const cashlink = cashlinks.get(token);
+            if (!cashlink) {
+                throw new Error(`Cashlink not found for token: ${token}`);
+            }
             const link = shortLinks ? shortLinks.get(token) : cashlink.render();
+            if (!link) {
+                throw new Error(`Link not found for token: ${token}`);
+            }
             drawFront(centerX, centerY, cashlink, link, canvas, context);
             filenames.set(token, `cashcoins_${page}.svg`);
         } else {
@@ -317,6 +415,4 @@ function renderCoins(cashlinks, shortLinks, folder, side = 'both') {
     }
     return filenames;
 }
-
-module.exports = renderCoins;
 
