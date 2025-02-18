@@ -107,7 +107,6 @@ export class RpcClient {
      * @returns Promise resolving to transaction result
      */
     async sendTransaction(params: TransactionParams) {
-        
         try {
             const response = await this._client.consensus.sendTransaction({
                 ...params,
@@ -252,7 +251,7 @@ export class RpcClient {
                 //@ts-ignore
                 params
             );
-            
+
             if (!response.data) throw new Error('Failed to get transactions');
             return response.data;
         } catch (error) {

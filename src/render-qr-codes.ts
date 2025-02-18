@@ -1,14 +1,14 @@
 /**
  * Nimiq QR Code Generator
  * Generates SVG QR codes with Nimiq styling and gradient options.
- * 
+ *
  * Features:
  * - Creates SVG-based QR codes
  * - Supports Nimiq's brand colors and gradients
  * - Configurable error correction levels
  * - Custom fill options including radial/linear gradients
  * - CLI interface for single QR code generation
- * 
+ *
  * The generator supports both programmatic usage and CLI operation.
  */
 
@@ -113,22 +113,22 @@ if (import.meta.url === `file://${process.argv[1]}`) {
             rl.question('Color (light-blue/indigo; default indigo): ', resolve)) || 'indigo';
         const errorCorrection = await new Promise<string>((resolve) =>
             rl.question('Error Correction (L/M/Q/H; default M): ', resolve)) || 'M';
-            
+
         let filename = `${content.replace(/https?:\/\//, '').replace(/[^A-Z0-9]+/gi, '-')}-${color}-${errorCorrection}`;
         filename = await new Promise<string>((resolve) => rl.question(`Filename (default ${filename}): `, resolve))
             || filename;
-            
+
         const currentDir = dirname(fileURLToPath(import.meta.url));
         const qrDir = join(currentDir, '..', 'generated-qr');
-        
+
         // Create directory if it doesn't exist
         if (!fs.existsSync(qrDir)) {
             fs.mkdirSync(qrDir, { recursive: true });
         }
-        
+
         const filepath = join(qrDir, filename).replace(/(\.svg)?$/, '.svg');
         rl.close();
-        
+
         createQrCode(filepath, content, {
             fill: {
                 type: 'radial-gradient',

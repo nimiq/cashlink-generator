@@ -1,7 +1,7 @@
 /**
  * Nimiq Cashlink Generator Tool
  * Main entry point for creating, managing, and handling Nimiq cashlinks.
- * 
+ *
  * Features:
  * - Create new cashlinks with customizable values, messages, and themes
  * - Import and modify existing cashlinks
@@ -9,7 +9,7 @@
  * - Claim unclaimed cashlinks
  * - Generate QR codes and coin images
  * - Create usage statistics
- * 
+ *
  * The tool supports both interactive CLI usage and programmatic integration.
  */
 
@@ -136,7 +136,7 @@ async function promptPrivateKey(): Promise<Uint8Array> {
 
     return new Promise((resolve) => {
         const backupWords: string[] = [];
-        
+
         mutableStdout.muted = false;
         rl.setPrompt('Account (backup words): ');
         rl.prompt(true);
@@ -153,7 +153,7 @@ async function promptPrivateKey(): Promise<Uint8Array> {
         rl.on('close', () => {
             const extendedPrivateKey = MnemonicUtils.mnemonicToExtendedPrivateKey(backupWords.join(' '));
             const privateKey = extendedPrivateKey.derivePath(`m/44'/242'/0'/0'`).privateKey;
-            resolve(privateKey.serialize()); 
+            resolve(privateKey.serialize());
         });
     });
 }
@@ -180,8 +180,7 @@ function createCashlinks(
     const cashlinks = new Map<string, Cashlink>();
     const config = getConfig();
     const secretSalt = BufferUtils.fromBase64(config.salt);
-    
-    
+
     while (cashlinks.size < cashlinkCount) {
         const tokenEntropy = config.tokenLength * 6; // in bit. Tokens are base64. Each base64 char encodes 6 bit.
         const randomBytes = crypto.randomBytes(Math.ceil(tokenEntropy / 8));
@@ -195,7 +194,7 @@ function createCashlinks(
         const privateKeyBytes = Hash.computeBlake2b(saltedTokenBytes);
         const privateKey = PrivateKey.deserialize(privateKeyBytes);
         const keyPair = KeyPair.derive(privateKey);
-        
+
         cashlinks.set(
             token,
             new Cashlink(config.cashlinkBaseUrl, keyPair, cashlinkValue, cashlinkMessage, cashlinkTheme),
@@ -232,11 +231,11 @@ async function wizardCreateCashlinks(): Promise<WizardResult> {
 
     console.log('\nCreating Cashlinks');
     const cashlinks = createCashlinks(cashlinkCount, cashlinkValue, cashlinkMessage, cashlinkTheme);
-    
+
     const shortLinks = shortLinkBaseUrl !== 'none'
         ? new Map([...cashlinks.keys()].map((token): [string, string] => [token, `${shortLinkBaseUrl}${token}`]))
         : null;
-        
+
     console.log(`${cashlinks.size} Cashlinks created.\n`);
 
     return { cashlinks, shortLinks };
@@ -270,7 +269,7 @@ async function wizardCreateImages(
 ): Promise<ImageFiles> {
     const format = await prompt('Choose an output format [QR/coin]: ');
     let imageFiles: ImageFiles;
-    
+
     if (format.toLowerCase() !== 'coin') {
         console.log('\nRendering QR Codes');
         const links = shortLinks
@@ -282,7 +281,7 @@ async function wizardCreateImages(
         imageFiles = renderCoins(cashlinks, shortLinks, folder);
         console.log('CashCoins rendered.\n');
     }
-    
+
     return imageFiles;
 }
 
@@ -442,7 +441,7 @@ async function wizardChangeMessage(cashlinks: Map<string, Cashlink>): Promise<bo
     const oldCashlinkMessage = cashlinks.values().next().value.message;
     const newCashlinkMessage = (await prompt(`New Cashlink message ["none"/message, old message: "${oldCashlinkMessage}"]: `)
         || oldCashlinkMessage).replace(/^none$/, '');
-    
+
     if (oldCashlinkMessage === newCashlinkMessage) {
         console.log('Keeping the old Cashlink message.')
         return false;
@@ -465,7 +464,7 @@ async function wizardChangeMessage(cashlinks: Map<string, Cashlink>): Promise<bo
 async function wizardChangeTheme(cashlinks: Map<string, Cashlink>): Promise<boolean> {
     const oldCashlinkTheme = cashlinks.values().next().value.theme;
     const newCashlinkTheme = await promptCashlinkTheme(oldCashlinkTheme);
-    
+
     if (oldCashlinkTheme === newCashlinkTheme) {
         console.log('Keeping the old Cashlink theme.')
         return false;
@@ -489,7 +488,7 @@ async function main() {
         const config = getConfig();
         const client = new RpcClient(config.nodeIp, config.nodePort);
         console.log('Welcome to the cashlink generator!\n');
-        
+
         // Initialize variables
         let cashlinks: Map<string, Cashlink>;
         let shortLinks: Map<string, string> | null;
@@ -561,10 +560,7 @@ async function main() {
             );
         }
         process.exit(0);
-        
-    } 
-        
-    catch (error) {
+    } catch (error) {
         console.error('Error:', error instanceof Error ? error.message : 'Unknown error');
         process.exit(1);
     }

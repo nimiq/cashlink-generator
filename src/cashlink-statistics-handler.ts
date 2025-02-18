@@ -1,14 +1,14 @@
 /**
  * Nimiq Cashlink Statistics Handler
  * Generates detailed statistics for cashlink usage and claims.
- * 
+ *
  * Features:
  * - Track funded and claimed cashlinks
  * - Monitor claiming patterns
  * - Generate per-day statistics
  * - Track unique claimers
  * - Support for reclaim address tracking
- * 
+ *
  * The statistics handler provides detailed insights into cashlink usage patterns.
  */
 
@@ -61,7 +61,7 @@ export async function createStatistics(
                 for (const tx of transactionObjects) {
                     const toAddress = tx.to; // Use recipient instead of toAddress
                     const timestamp = tx.timestamp;
-                    
+
                     if (toAddress === cashlinkUserFriendlyAddress) {
                         wasFunded = true;
                     } else if (toAddress === reclaimUserFriendlyAddress) {
@@ -101,13 +101,13 @@ export async function createStatistics(
     const repeatClaimers = [...claimsPerAddress.entries()]
         .filter(([, claims]) => claims > 1)
         .sort(([, claimsA], [, claimsB]) => claimsB - claimsA);
-        
+
     const claimsPerDateSorted = [...claimsPerDate.entries()]
         .sort(([dateA], [dateB]) => dateA.localeCompare(dateB));
-        
-    const percentFormatter = new Intl.NumberFormat('en-US', { 
-        style: 'percent', 
-        maximumFractionDigits: 2 
+
+    const percentFormatter = new Intl.NumberFormat('en-US', {
+        style: 'percent',
+        maximumFractionDigits: 2
     });
 
     return formatStatistics(
@@ -168,7 +168,7 @@ function formatStatistics(
         + repeatClaimers.map(([address, claims]) => `    ${address}: ${claims}\n`).join('')
         + '\n'
         + `User claims per day (${timeZone} timezone):\n`
-        + claimsPerDateSorted.map(([date, [claims, claimsFirstTimers]]) => 
+        + claimsPerDateSorted.map(([date, [claims, claimsFirstTimers]]) =>
             `    ${date}: ${claims}${claimsFirstTimers !== claims 
                 ? ` (${claimsFirstTimers} only counting first time claimers)` 
                 : ''}\n`

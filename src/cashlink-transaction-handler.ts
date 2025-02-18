@@ -1,13 +1,13 @@
 /**
  * Nimiq Cashlink Transaction Handler
  * Manages the funding and claiming of cashlinks through blockchain transactions.
- * 
+ *
  * Features:
  * - Fund multiple cashlinks from a single wallet
  * - Claim unclaimed cashlinks to a specified address
  * - Handle transaction signing and submission
  * - Support for transaction metadata
- * 
+ *
  * The transaction handler ensures proper funding and claiming of cashlinks.
  */
 

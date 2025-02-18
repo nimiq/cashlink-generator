@@ -1,14 +1,14 @@
 /**
  * Nimiq Cashlink Integration Tests
  * Tests core functionality of the cashlink generator using testnet.
- * 
+ *
  * Features:
  * - Tests node connectivity
  * - Verifies consensus establishment
  * - Checks block height
  * - Tests balance queries
  * - Verifies transaction receipt retrieval
- * 
+ *
  * These tests ensure proper integration with the Nimiq network.
  */
 
@@ -20,7 +20,7 @@ async function main() {
     try {
         const config = getConfig();
         const client = new RpcClient(config.nodeIp, config.nodePort);
-        
+
         /**
          * Test 1: Node Connection
          * Verifies that we can connect to the Nimiq node
@@ -30,7 +30,7 @@ async function main() {
             throw new Error('Failed to connect to Nimiq node');
         }
         console.log('Connected to node successfully');
-        
+
         /**
          * Test 2: Consensus Status
          * Checks if the node has established consensus with the network
@@ -40,7 +40,7 @@ async function main() {
             throw new Error('Node consensus not established');
         }
         console.log('Consensus established');
-        
+
         /**
          * Test 3: Block Height
          * Retrieves current block height to verify chain access
@@ -63,10 +63,9 @@ async function main() {
         const txHash = 'd15bd926ad0c0e52346badf29cc128a26369d13a45498ad5e6a122f986054132';
         const transaction = await client.getTransactionReceipt(txHash);
         console.log(`Transaction ${txHash} was sent on block: `,transaction.blockNumber);
-        
+
         console.log('All tasks completed successfully');
         process.exit(0);
-        
     } catch (error) {
         console.error('Error:', error instanceof Error ? error.message : 'Unknown error');
         process.exit(1);

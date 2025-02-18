@@ -1,14 +1,14 @@
 /**
  * Nimiq Cashlink File Handler
  * Manages import and export of cashlinks to/from CSV files.
- * 
+ *
  * Features:
  * - Import cashlinks from CSV
  * - Export cashlinks to CSV
  * - Handle private key serialization
  * - Manage image file references
  * - Support short links
- * 
+ *
  * The file handler ensures proper persistence and loading of cashlink data.
  */
 
@@ -35,14 +35,14 @@ interface ImportedData {
 export function importCashlinks(file: string): ImportedData {
     const content = fs.readFileSync(file, 'utf8');
     const lines = content.trim().split('\n');
-    
+
     const cashlinks = new Map<string, Cashlink>();
     const shortLinks = new Map<string, string>();
     const imageFiles = new Map<string, string>();
 
     for (const line of lines) {
         const [token, shortLink, imageFile, cashlinkUrl, privateKeyBase64] = line.split(',');
-        
+
         try {
             // Extract private key from base64
             const privateKeyBytes = BufferUtils.fromBase64Url(privateKeyBase64);
@@ -54,13 +54,13 @@ export function importCashlinks(file: string): ImportedData {
             const hashPart = url.hash.substring(1); // Remove leading #
             const [encodedData] = hashPart.split(',');
             const decodedData = BufferUtils.fromBase64Url(encodedData);
-            
+
             // Create a proper SerialBuffer to correctly read the uint64 value
             const buf = new SerialBuffer(decodedData);
             const privateKeySize = privateKey.serializedSize;
             buf.read(privateKeySize); // Skip the private key bytes
             const value = buf.readUint64(); // Correctly read the 64-bit value
-            
+
             // Read message if present
             let message = '';
             if (buf.readPos < buf.byteLength) {
@@ -80,7 +80,6 @@ export function importCashlinks(file: string): ImportedData {
             cashlinks.set(token, cashlink);
             if (shortLink !== '') shortLinks.set(token, shortLink);
             if (imageFile !== '') imageFiles.set(token, imageFile);
-
         } catch (e) {
             console.error(`Failed to parse line: ${line}`);
             console.error('Error:', e);
@@ -108,13 +107,13 @@ export function exportCashlinks(
         const shortLink = shortLinks?.get(token) || '';
         const imageFile = imageFiles.get(token) || '';
         const privateKeyBase64 = BufferUtils.toBase64Url(cashlink.keyPair.privateKey.serialize());
-        
+
         // Ensure the cashlink URL includes /cashlink/
         const url = cashlink.render();
         const urlObj = new URL(url);
         const baseWithCashlink = urlObj.origin + (urlObj.pathname.includes('/cashlink/') ? urlObj.pathname : '/cashlink/');
         const finalUrl = `${baseWithCashlink}#${urlObj.hash.substring(1)}`;
-        
+
         return `${token},${shortLink},${imageFile},${finalUrl},${privateKeyBase64}`;
     });
 

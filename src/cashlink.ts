@@ -1,14 +1,14 @@
 /**
  * Nimiq Cashlink Core Implementation
  * Handles the creation, serialization, and management of Nimiq cashlinks.
- * 
+ *
  * Features:
  * - Create and parse cashlinks
  * - Handle message encoding/decoding
  * - Support multiple themes
  * - Manage serialization format
  * - Handle key pair management
- * 
+ *
  * The cashlink class is the core component for cashlink generation and handling.
  */
 
@@ -58,13 +58,13 @@ export class Cashlink {
         const hash = rawHash.replace(/~/g, '')
             .replace(/=*$/, (match) => new Array(match.length).fill('.').join(''));
         const buf = BufferUtils.fromBase64Url(hash);
-        
+
         // Ensure we preserve the /cashlink/ part in the URL if it exists
         const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-        const finalBaseUrl = normalizedBaseUrl.includes('/cashlink') ? 
-            normalizedBaseUrl : 
+        const finalBaseUrl = normalizedBaseUrl.includes('/cashlink') ?
+            normalizedBaseUrl :
             `${normalizedBaseUrl}/cashlink`;
-        
+
         const keyPair = KeyPair.derive(PrivateKey.deserialize(buf));
         const value = buf.readUint64();
         let message = '';

@@ -1,14 +1,14 @@
 /**
  * Nimiq Cashlink Coin Renderer
  * Generates printable hexagonal coin designs with QR codes for Nimiq cashlinks.
- * 
+ *
  * Features:
  * - Creates SVG-based coin designs
  * - Supports both front and back side rendering
  * - Customizable hexagon size and layout
  * - QR code integration
  * - Support for compact and standard layouts
- * 
+ *
  * The renderer supports both single coin generation and batch processing.
  */
 
@@ -165,7 +165,7 @@ function drawHexagon(
             virtualCorners[j][0] - relativeCornerArcOffset * (virtualCorners[j][0] - centerX),
             virtualCorners[j][1] - relativeCornerArcOffset * (virtualCorners[j][1] - centerY),
         ] as [number, number];
-        
+
         const startAngle = arcPointToAngle(lines[i].end as [number, number], center, borderRadius);
         const endAngle = arcPointToAngle(lines[j].start as [number, number], center, borderRadius);
         arcs.push({ center, startAngle, endAngle });

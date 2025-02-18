@@ -1,13 +1,13 @@
 /**
  * Nimiq Cashlink Configuration Handler
  * Manages environment configuration for the cashlink generator.
- * 
+ *
  * Features:
  * - Load environment variables
  * - Validate configuration values
  * - Generate cashlink base URLs
  * - Type-safe configuration access
- * 
+ *
  * The configuration handler ensures proper setup of the cashlink generator.
  */
 
