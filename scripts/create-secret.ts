@@ -15,7 +15,7 @@ const SECRET_SALT_LENGTH = 128; // overkill, but also doesn't hurt
 async function promptUser(question: string): Promise<string> {
     const rl = readline.createInterface({
         input: process.stdin,
-        output: process.stdout
+        output: process.stdout,
     });
 
     return new Promise((resolve) => {
@@ -54,21 +54,20 @@ async function createSecret(): Promise<void> {
         envContent = envContent.replace(/^SALT=.*$/m, `SALT=${secretBase64}`);
     } else {
         // Add new salt to existing content or create new content with correct defaults
-        const defaultEnv = `# Nimiq Node IP address
-NODE_IP=127.0.0.1
-
-# Nimiq Node RPC port
-NODE_PORT=8648
-
-# Network to use (main/test)
-NETWORK=test
-
-# Length of cashlink tokens in characters
-TOKEN_LENGTH=6
-
-# Salt for cashlink generation (base64 encoded). Must be kept secret.
-SALT=${secretBase64}
-`;
+        const defaultEnv = '# Nimiq Node IP address\n'
+            + 'NODE_IP=127.0.0.1\n'
+            + '\n'
+            + '# Nimiq Node RPC port\n'
+            + 'NODE_PORT=8648\n'
+            + '\n'
+            + '# Network to use (main/test)\n'
+            + 'NETWORK=test\n'
+            + '\n'
+            + '# Length of cashlink tokens in characters\n'
+            + 'TOKEN_LENGTH=6\n'
+            + '\n'
+            + '# Salt for cashlink generation (base64 encoded). Must be kept secret.\n'
+            + `SALT=${secretBase64}\n`;
         envContent = envContent || defaultEnv;
     }
 
@@ -79,7 +78,7 @@ SALT=${secretBase64}
 }
 
 // Execute immediately
-createSecret().catch(error => {
+createSecret().catch((error) => {
     console.error('Error:', error instanceof Error ? error.message : 'Unknown error');
     process.exit(1);
 });

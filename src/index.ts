@@ -11,26 +11,24 @@
  * - Create usage statistics
  */
 
-import { getConfig } from './config';
-import { RpcClient } from './rpc-client';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import fs from 'fs';
 import readline from 'readline';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Writable } from 'stream';
-import { MnemonicUtils } from '@nimiq/core';
-import { BufferUtils, SerialBuffer, Hash, PrivateKey, KeyPair, PublicKey, Address } from '@nimiq/core';
+import { BufferUtils, SerialBuffer, Hash, PrivateKey, KeyPair, PublicKey, Address, MnemonicUtils } from '@nimiq/core';
 import crypto from 'crypto';
+import { getConfig } from './config';
+import { RpcClient } from './rpc-client';
 import { Cashlink, CashlinkTheme } from './cashlink';
-import { renderCoins } from './render-coins';
 import { exportCashlinks, importCashlinks } from './file-handler';
 import renderQrCodes from './render-qr-codes';
+import renderCoins from './render-coins';
 import { claimCashlinks, fundCashlinks } from './cashlink-transaction-handler';
 import { createStatistics } from './cashlink-statistics-handler';
-import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 /**
  * Formats date components with leading zeros
@@ -99,7 +97,7 @@ async function promptCashlinkTheme(oldCashlinkTheme?: number): Promise<number> {
         + (oldCashlinkTheme !== undefined
             ? `; old theme: ${CashlinkTheme[oldCashlinkTheme]?.toLowerCase() || oldCashlinkTheme}` // reverse map or num
             : '')
-        + ']: '
+        + ']: ',
     );
     return parseInt(cashlinkTheme)
         || CashlinkTheme[cashlinkTheme.toUpperCase() as keyof typeof CashlinkTheme]
@@ -126,12 +124,10 @@ async function promptPrivateKey(): Promise<Uint8Array> {
         }
     }) as MutableStdout;
 
-    mutableStdout.muted = false;
-
     const rl = readline.createInterface({
         input: process.stdin,
         output: mutableStdout,
-        terminal: true
+        terminal: true,
     });
 
     return new Promise((resolve) => {
@@ -176,7 +172,7 @@ function createCashlinks(
     cashlinkCount: number,
     cashlinkValue: number,
     cashlinkMessage: string,
-    cashlinkTheme: number
+    cashlinkTheme: number,
 ): Map<string, Cashlink> {
     const cashlinks = new Map<string, Cashlink>(); // token -> cashlink
     const config = getConfig();
@@ -267,7 +263,7 @@ type ImageFiles = Map<string, string>;
 async function wizardCreateImages(
     cashlinks: Map<string, Cashlink>,
     shortLinks: Map<string, string> | null,
-    folder: string
+    folder: string,
 ): Promise<ImageFiles> {
     const format = await prompt('Choose an output format [QR/coin]: ');
     let imageFiles: ImageFiles;
@@ -351,7 +347,7 @@ async function wizardFundCashlinks(cashlinks: Map<string, Cashlink>, rpcClient: 
 async function wizardCreateStatistics(
     cashlinks: Map<string, Cashlink>,
     folder: string,
-    rpcClient: RpcClient
+    rpcClient: RpcClient,
 ): Promise<void> {
     const reclaimUserFriendlyAddress = await prompt('Address cashlinks have been reclaimed to [default: none]: ');
     const reclaimAddress = reclaimUserFriendlyAddress
@@ -425,13 +421,12 @@ async function wizardImportCashlinks(): Promise<WizardResult & { imageFiles: Ima
  */
 async function wizardClaimCashlinks(
     cashlinks: Map<string, Cashlink>,
-    rpcClient: RpcClient
+    rpcClient: RpcClient,
 ): Promise<void> {
-    const recipientAddress = Address.fromUserFriendlyAddress(
-        await prompt('Redeem unclaimed Cashlinks to address: ')
-    );
+    const recipientUserFriendlyAddress = await prompt('Redeem unclaimed Cashlinks to address: ');
+    const recipientAddress = Address.fromUserFriendlyAddress(recipientUserFriendlyAddress);
 
-    if (await prompt(`Redeeming unclaimed Cashlinks to ${recipientAddress.toUserFriendlyAddress()}, ok? [y/N]: `) !== 'y') {
+    if (await prompt(`Redeeming unclaimed Cashlinks to ${recipientUserFriendlyAddress}, ok? [y/N]: `) !== 'y') {
         console.log('Not redeeming Cashlinks.');
         return;
     }
@@ -449,8 +444,10 @@ async function wizardClaimCashlinks(
  */
 async function wizardChangeMessage(cashlinks: Map<string, Cashlink>): Promise<boolean> {
     const oldCashlinkMessage = cashlinks.values().next().value.message;
-    const newCashlinkMessage = (await prompt(`New Cashlink message ["none"/message, old message: "${oldCashlinkMessage}"]: `)
-        || oldCashlinkMessage).replace(/^none$/, '');
+    const newCashlinkMessage = (
+        await prompt(`New Cashlink message ["none"/message, old message: "${oldCashlinkMessage}"]: `)
+        || oldCashlinkMessage
+    ).replace(/^none$/, '');
 
     if (oldCashlinkMessage === newCashlinkMessage) {
         console.log('Keeping the old Cashlink message.')
@@ -512,16 +509,14 @@ async function main() {
         if (importResult) {
             ({ cashlinks, shortLinks, imageFiles, folder } = importResult);
             const operation = await prompt(
-                `What do you want to do? [${Object.values(Operation).join('/')}]: `
+                `What do you want to do? [${Object.values(Operation).join('/')}]: `,
             );
             if (!Object.values(Operation).includes(operation as OperationType)) {
                 throw new Error(`Unsupported operation ${operation}`);
             }
             operations = [operation as OperationType];
         } else {
-            const createResult = await wizardCreateCashlinks();
-            cashlinks = createResult.cashlinks;
-            shortLinks = createResult.shortLinks;
+            ({ cashlinks, shortLinks } = await wizardCreateCashlinks());
             folder = createFolder();
             operations = [Operation.CREATE_IMAGES, Operation.FUND];
             shouldExport = true;
@@ -532,7 +527,7 @@ async function main() {
             const oldImageFiles = imageFiles;
             imageFiles = await wizardCreateImages(cashlinks, shortLinks, folder);
             shouldExport = shouldExport || !oldImageFiles.size
-                || [...oldImageFiles.values()][0] !== [...imageFiles.values()][0];
+                || oldImageFiles.values().next().value !== imageFiles.values().next().value;
         }
 
         if (operations.includes(Operation.CHANGE_MESSAGE)) {
@@ -545,7 +540,9 @@ async function main() {
 
         if (shouldExport) {
             console.log('Exporting cashlinks.');
-            const file = `${folder || '.'}/cashlinks${importResult ? ` (update ${getCurrentDateString()} ${operations.join(' ')})` : ''}.csv`;
+            const file = `${folder || '.'}/cashlinks`
+                + (importResult ? ` (update ${getCurrentDateString()} ${operations.join(' ')})` : '')
+                + '.csv';
             exportCashlinks(cashlinks, shortLinks, imageFiles, file);
             console.log(`Cashlinks exported to ${file.replace(__dirname, '.')}.\n`);
         }
@@ -566,7 +563,7 @@ async function main() {
         console.log('\nAll operations finished :)');
         if (operations.includes(Operation.FUND) || operations.includes(Operation.CLAIM)) {
             console.log(
-                'Transactions might still be pending in your local node and waiting to be relayed to other network nodes.\n'
+                'Transactions might still be pending in your local node and waiting to be relayed to other nodes.\n'
                 + 'Make sure to check your wallet balance and keep your node running if needed.',
             );
         }
@@ -578,7 +575,7 @@ async function main() {
 }
 
 // Execute and handle unhandled rejections
-main().catch(error => {
+main().catch((error) => {
     console.error('Unhandled error:', error);
     process.exit(1);
 });

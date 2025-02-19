@@ -12,12 +12,12 @@
  * The generator supports both programmatic usage and CLI operation.
  */
 
-import { createCanvas, Canvas, CanvasRenderingContext2D } from 'canvas';
 import fs from 'fs';
 import readline from 'readline';
-import QrCode from './qr-code';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { createCanvas, Canvas, CanvasRenderingContext2D } from 'canvas';
+import QrCode from './qr-code';
 
 /**
  * Canvas size and padding configuration
@@ -85,7 +85,11 @@ function createQrCode(filepath: string, text: string, { fill = '#1F2348', ...rem
  * @param options - Rendering options
  * @returns Map of tokens to generated filenames
  */
-function renderQrCodes(links: Map<string, string>, folder: string, options: QROptions = {}): Map<string, string> {
+export default function renderQrCodes(
+    links: Map<string, string>,
+    folder: string,
+    options: QROptions = {},
+): Map<string, string> {
     const filenames = new Map<string, string>();
     for (const [token, link] of links) {
         const filename = `qr-${token}.svg`;
@@ -94,8 +98,6 @@ function renderQrCodes(links: Map<string, string>, folder: string, options: QROp
     }
     return filenames;
 }
-
-export default renderQrCodes;
 
 // CLI interface
 if (import.meta.url === `file://${process.argv[1]}`) {

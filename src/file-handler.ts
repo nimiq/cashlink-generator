@@ -13,17 +13,17 @@
  */
 
 import fs from 'fs';
-import { Cashlink } from './cashlink';
-import { PrivateKey, KeyPair, SerialBuffer } from '@nimiq/core';
+import { PrivateKey, KeyPair } from '@nimiq/core';
 import { BufferUtils } from '@nimiq/core';
+import { Cashlink } from './cashlink';
 
 /**
  * Data structure for imported cashlink information
  */
 interface ImportedData {
-    cashlinks: Map<string, Cashlink>;
-    shortLinks: Map<string, string>;
-    imageFiles: Map<string, string>;
+    cashlinks: Map</* token id */ string, Cashlink>;
+    shortLinks: Map</* token id */ string, /* link */ string>;
+    imageFiles: Map</* token id */ string, /* filename */ string>;
 }
 
 /**
@@ -56,16 +56,15 @@ export function importCashlinks(file: string): ImportedData {
             const decodedData = BufferUtils.fromBase64Url(encodedData);
 
             // Create a proper SerialBuffer to correctly read the uint64 value
-            const buf = new SerialBuffer(decodedData);
             const privateKeySize = privateKey.serializedSize;
-            buf.read(privateKeySize); // Skip the private key bytes
-            const value = buf.readUint64(); // Correctly read the 64-bit value
+            decodedData.read(privateKeySize); // Skip the private key bytes
+            const value = decodedData.readUint64(); // Correctly read the 64-bit value
 
             // Read message if present
             let message = '';
-            if (buf.readPos < buf.byteLength) {
-                const messageLength = buf.readUint8();
-                const messageBytes = buf.read(messageLength);
+            if (decodedData.readPos < decodedData.byteLength) {
+                const messageLength = decodedData.readUint8();
+                const messageBytes = decodedData.read(messageLength);
                 message = new TextDecoder().decode(messageBytes);
             }
 
@@ -74,7 +73,7 @@ export function importCashlinks(file: string): ImportedData {
                 url.origin + (url.pathname.includes('/cashlink') ? url.pathname : '/cashlink'),
                 keyPair,
                 value,
-                message
+                message,
             );
 
             cashlinks.set(token, cashlink);
@@ -87,6 +86,7 @@ export function importCashlinks(file: string): ImportedData {
         }
     }
 
+    if (cashlinks.size === 0) throw new Error('No cashlinks imported.');
     return { cashlinks, shortLinks, imageFiles };
 }
 
@@ -101,7 +101,7 @@ export function exportCashlinks(
     cashlinks: Map<string, Cashlink>,
     shortLinks: Map<string, string> | null,
     imageFiles: Map<string, string>,
-    file: string
+    file: string,
 ): void {
     const lines = [...cashlinks].map(([token, cashlink]) => {
         const shortLink = shortLinks?.get(token) || '';
@@ -111,7 +111,8 @@ export function exportCashlinks(
         // Ensure the cashlink URL includes /cashlink/
         const url = cashlink.render();
         const urlObj = new URL(url);
-        const baseWithCashlink = urlObj.origin + (urlObj.pathname.includes('/cashlink/') ? urlObj.pathname : '/cashlink/');
+        const baseWithCashlink = urlObj.origin
+            + (urlObj.pathname.includes('/cashlink/') ? urlObj.pathname : '/cashlink/');
         const finalUrl = `${baseWithCashlink}#${urlObj.hash.substring(1)}`;
 
         return `${token},${shortLink},${imageFile},${finalUrl},${privateKeyBase64}`;

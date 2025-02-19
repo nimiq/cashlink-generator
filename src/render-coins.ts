@@ -12,8 +12,8 @@
  * The renderer supports both single coin generation and batch processing.
  */
 
-import { createCanvas, registerFont, Canvas, CanvasRenderingContext2D } from 'canvas';
 import fs from 'fs';
+import { createCanvas, registerFont, Canvas, CanvasRenderingContext2D } from 'canvas';
 import { Cashlink } from './cashlink';
 import QrCode from './qr-code';
 
@@ -85,7 +85,7 @@ function drawHexagon(
     centerY: number,
     radius: number,
     borderRadius: number,
-    context: CanvasRenderingContext2D
+    context: CanvasRenderingContext2D,
 ): void {
     // Inspired by nimiqode HexagonRing.
     // Note that the radius is the same as the full side lengths.
@@ -137,7 +137,12 @@ function drawHexagon(
     }
 
     // to convert arc points to angles
-    function arcPointToAngle([x, y]: [number, number], [centerX, centerY]: [number, number], radius: number, startAngle?: number): number {
+    function arcPointToAngle(
+        [x, y]: [number, number],
+        [centerX, centerY]: [number, number],
+        radius: number,
+        startAngle?: number,
+    ): number {
         let angle = Math.acos((x - centerX) / radius);
         // Note that the solution is not unique (e.g. points (3,2) and (3,-2) have same x and thus the same solution).
         // Also due to the symmetry of cos, multiple angles have the same cos value and thus acos is not unique.
@@ -219,7 +224,7 @@ function drawFront(
     cashlink: Cashlink,
     link: string,
     canvas: Canvas,
-    context: CanvasRenderingContext2D
+    context: CanvasRenderingContext2D,
 ): void {
     drawHexagon(centerX, centerY, HEXAGON_RADIUS, BORDER_RADIUS, context);
 
@@ -256,7 +261,7 @@ function drawBack(
     centerX: number,
     centerY: number,
     size: number,
-    context: CanvasRenderingContext2D
+    context: CanvasRenderingContext2D,
 ): void {
     // drawHexagon(centerX, centerY, HEXAGON_RADIUS, BORDER_RADIUS, context);
 
@@ -285,7 +290,7 @@ function drawBack(
         'H([0-9.]+)|' +
         'V([0-9.]+)|' +
         'C([0-9.]+) ([0-9.]+) ([0-9.]+) ([0-9.]+) ([0-9.]+) ([0-9.]+)',
-        'g'
+        'g',
     );
     let matchResult;
     let position: [number, number] = [0, 0];
@@ -329,11 +334,11 @@ function drawBack(
  * @param side - Which sides to render ('both', 'front', or 'back')
  * @returns Map of token to generated image filenames
  */
-export function renderCoins(
+export default function renderCoins(
     cashlinks: Map<string, Cashlink>,
     shortLinks: Map<string, string> | null,
     folder: string,
-    side: 'both' | 'front' | 'back' = 'both'
+    side: 'both' | 'front' | 'back' = 'both',
 ): Map<string, string> {
     if (side === 'both') {
         renderCoins(cashlinks, shortLinks, folder, 'back');

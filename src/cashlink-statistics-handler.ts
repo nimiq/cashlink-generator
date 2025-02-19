@@ -13,9 +13,9 @@
  */
 
 import { Address } from '@nimiq/core';
+import { Transaction as RpcTransaction } from '@blouflash/nimiq-rpc';
 import { RpcClient } from './rpc-client';
 import { Cashlink } from './cashlink';
-import { Transaction as RpcTransaction } from '@blouflash/nimiq-rpc';
 
 /**
  * Creates comprehensive statistics for a set of cashlinks
@@ -29,7 +29,7 @@ export async function createStatistics(
     cashlinks: Map<string, Cashlink>,
     reclaimAddress: Address | null,
     timeZone: string,
-    rpcClient: RpcClient
+    rpcClient: RpcClient,
 ): Promise<string> {
     const reclaimUserFriendlyAddress = reclaimAddress ? reclaimAddress.toUserFriendlyAddress() : null;
     const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -54,7 +54,6 @@ export async function createStatistics(
     for (const cashlink of cashlinks.values()) {
         const cashlinkAddress = cashlink.address;
         const cashlinkUserFriendlyAddress = cashlinkAddress.toUserFriendlyAddress();
-        console.log(cashlinkUserFriendlyAddress)
         const statisticPromise = rpcClient.getTransactionsByAddress(cashlinkUserFriendlyAddress)
             .then((transactionObjects: RpcTransaction[]) => {
                 // Not assuming cashlink has maximally one funding and claiming tx. They can theoretically have multiple
@@ -63,19 +62,22 @@ export async function createStatistics(
                 let wasReclaimed = false;
 
                 for (const tx of transactionObjects) {
-                    const toAddress = tx.to;
-                    const timestamp = tx.timestamp;
+                    const { to: recipient, timestamp } = tx;
 
-                    if (toAddress === cashlinkUserFriendlyAddress) {
+                    if (recipient === cashlinkUserFriendlyAddress) {
                         wasFunded = true;
-                    } else if (toAddress === reclaimUserFriendlyAddress) {
+                    } else if (recipient === reclaimUserFriendlyAddress) {
                         wasReclaimed = true;
                     } else {
                         wasUserClaimed = true;
-                        const previousAddressClaims = claimsPerAddress.get(toAddress) || 0;
-                        claimsPerAddress.set(toAddress, previousAddressClaims + 1);
-                        //@ts-ignore
-                        const [{value: month},,{value: day},,{value: year}] = dateFormatter.formatToParts(timestamp * 1000);
+                        const previousAddressClaims = claimsPerAddress.get(recipient) || 0;
+                        claimsPerAddress.set(recipient, previousAddressClaims + 1);
+                        const [
+                            { value: month },,
+                            { value: day },,
+                            { value: year },
+                            //@ts-ignore
+                        ] = dateFormatter.formatToParts(timestamp * 1000);
                         const date = `${year}-${month}-${day}`; // lexically sortable
                         const [previousDateClaims, previousDateClaimsFirstTimers] = claimsPerDate.get(date) || [0, 0];
                         claimsPerDate.set(date, [
@@ -111,7 +113,7 @@ export async function createStatistics(
 
     const percentFormatter = new Intl.NumberFormat('en-US', {
         style: 'percent',
-        maximumFractionDigits: 2
+        maximumFractionDigits: 2,
     });
 
     return formatStatistics(
@@ -125,7 +127,7 @@ export async function createStatistics(
         repeatClaimers,
         claimsPerDateSorted,
         percentFormatter,
-        timeZone
+        timeZone,
     );
 }
 
@@ -155,7 +157,7 @@ function formatStatistics(
     repeatClaimers: [string, number][],
     claimsPerDateSorted: [string, [number, number]][],
     percentFormatter: Intl.NumberFormat,
-    timeZone: string
+    timeZone: string,
 ): string {
     return `Total Cashlinks: ${totalCashlinks}\n`
         + `Funded: ${funded} (${percentFormatter.format(funded / totalCashlinks)})\n`
@@ -175,6 +177,6 @@ function formatStatistics(
         + claimsPerDateSorted.map(([date, [claims, claimsFirstTimers]]) =>
             `    ${date}: ${claims}${claimsFirstTimers !== claims 
                 ? ` (${claimsFirstTimers} only counting first time claimers)` 
-                : ''}\n`
+                : ''}\n`,
         ).join('');
 }

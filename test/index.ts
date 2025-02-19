@@ -73,7 +73,7 @@ async function main() {
 }
 
 // Execute and handle unhandled rejections
-main().catch(error => {
+main().catch((error) => {
     console.error('Unhandled error:', error);
     process.exit(1);
 });

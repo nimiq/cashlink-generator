@@ -24,15 +24,15 @@ export enum CashlinkTheme {
     LUNAR_NEW_YEAR = 3,
     EASTER = 4,
     GENERIC = 5,
-    BIRTHDAY = 6
+    BIRTHDAY = 6,
 }
 
 /**
  * Extra data fields for cashlink transactions
  */
 export const CashlinkExtraData = {
-    FUNDING: new Uint8Array([0, 130, 128, 146, 135]), // 'CASH'.split('').map(c => c.charCodeAt(0) + 63)
-    CLAIMING: new Uint8Array([0, 139, 136, 141, 138]), // 'LINK'.split('').map(c => c.charCodeAt(0) + 63)
+    FUNDING: new Uint8Array([0, 130, 128, 146, 135]), // 'CASH'.split('').map((c) => c.charCodeAt(0) + 63)
+    CLAIMING: new Uint8Array([0, 139, 136, 141, 138]), // 'LINK'.split('').map((c) => c.charCodeAt(0) + 63)
 } as const;
 
 /**
@@ -40,13 +40,13 @@ export const CashlinkExtraData = {
  * Handles the creation, modification, and serialization of cashlinks
  */
 export class Cashlink {
+    private static _textEncoder = new TextEncoder();
+    private static _textDecoder = new TextDecoder();
     private _baseUrl: string;
     private _keyPair: KeyPair;
     private _value: number;
     private _messageBytes: Uint8Array;
     private _theme: number;
-    private static _textEncoder = new TextEncoder();
-    private static _textDecoder = new TextDecoder();
 
     /**
      * Parse a cashlink from its string representation
@@ -94,7 +94,7 @@ export class Cashlink {
         keyPair: KeyPair,
         value: number /*luna*/,
         message: string = '',
-        theme: number = CashlinkTheme.UNSPECIFIED
+        theme: number = CashlinkTheme.UNSPECIFIED,
     ) {
         this._baseUrl = baseUrl;
         this._keyPair = keyPair;

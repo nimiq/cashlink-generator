@@ -15,7 +15,7 @@ import {
     BufferUtils,
     KeyPair,
     PrivateKey,
-    Address
+    Address,
 } from '@nimiq/core';
 import { Cashlink, CashlinkExtraData } from './cashlink';
 import { RpcClient } from './rpc-client';
@@ -31,7 +31,7 @@ export async function fundCashlinks(
     cashlinks: Map<string, Cashlink>,
     txFee: number,
     privateKey: PrivateKey,
-    rpcClient: RpcClient
+    rpcClient: RpcClient,
 ): Promise<void> {
     const keyPair = KeyPair.derive(privateKey);
     const senderAddress = keyPair.publicKey.toAddress();
@@ -43,7 +43,7 @@ export async function fundCashlinks(
             recipient: cashlink.address.toUserFriendlyAddress(),
             value: cashlink.value,
             fee: txFee,
-            data: BufferUtils.toHex(CashlinkExtraData.FUNDING)
+            data: BufferUtils.toHex(CashlinkExtraData.FUNDING),
         });
 
         sent++;
@@ -63,7 +63,7 @@ export async function fundCashlinks(
 export async function claimCashlinks(
     cashlinks: Map<string, Cashlink>,
     recipient: Address,
-    rpcClient: RpcClient
+    rpcClient: RpcClient,
 ): Promise<void> {
     let processed = 0;
     let unclaimed = 0;
@@ -80,7 +80,7 @@ export async function claimCashlinks(
                 recipient: recipient.toUserFriendlyAddress(),
                 value: cashlinkBalance,
                 fee: 0,
-                data: BufferUtils.toHex(CashlinkExtraData.CLAIMING)
+                data: BufferUtils.toHex(CashlinkExtraData.CLAIMING),
             });
         }
 
