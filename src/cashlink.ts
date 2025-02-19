@@ -31,8 +31,8 @@ export enum CashlinkTheme {
  * Extra data fields for cashlink transactions
  */
 export const CashlinkExtraData = {
-    FUNDING: new Uint8Array([0, 130, 128, 146, 135]),
-    CLAIMING: new Uint8Array([0, 139, 136, 141, 138]),
+    FUNDING: new Uint8Array([0, 130, 128, 146, 135]), // 'CASH'.split('').map(c => c.charCodeAt(0) + 63)
+    CLAIMING: new Uint8Array([0, 139, 136, 141, 138]), // 'LINK'.split('').map(c => c.charCodeAt(0) + 63)
 } as const;
 
 /**
@@ -157,7 +157,6 @@ export class Cashlink {
             /*theme*/ (this._theme ? 1 : 0),
         );
 
-        // Fix the serialization
         buf.write(this._keyPair.privateKey.serialize());
         buf.writeUint64(this._value);
         if (this._messageBytes.byteLength || this._theme) {

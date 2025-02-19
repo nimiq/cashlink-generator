@@ -39,12 +39,15 @@ export async function createStatistics(
         day: '2-digit',
     });
 
+    // Note that for reused cashlinks, these values might sum up to higher values than the cashlink count.
     let processed = 0;
     let funded = 0;
     let userClaimed = 0;
     let reclaimed = 0;
     let unclaimed = 0;
+    // Map userfriendly address -> number
     const claimsPerAddress = new Map<string, number>();
+    // Map date string in format yyyy-mm-dd -> [claims, claims only counting first timers]
     const claimsPerDate = new Map<string, [number, number]>();
 
     const pendingPromises = new Set<Promise<void>>();
@@ -54,12 +57,13 @@ export async function createStatistics(
         console.log(cashlinkUserFriendlyAddress)
         const statisticPromise = rpcClient.getTransactionsByAddress(cashlinkUserFriendlyAddress)
             .then((transactionObjects: RpcTransaction[]) => {
+                // Not assuming cashlink has maximally one funding and claiming tx. They can theoretically have multiple
                 let wasFunded = false;
                 let wasUserClaimed = false;
                 let wasReclaimed = false;
 
                 for (const tx of transactionObjects) {
-                    const toAddress = tx.to; // Use recipient instead of toAddress
+                    const toAddress = tx.to;
                     const timestamp = tx.timestamp;
 
                     if (toAddress === cashlinkUserFriendlyAddress) {
@@ -72,7 +76,7 @@ export async function createStatistics(
                         claimsPerAddress.set(toAddress, previousAddressClaims + 1);
                         //@ts-ignore
                         const [{value: month},,{value: day},,{value: year}] = dateFormatter.formatToParts(timestamp * 1000);
-                        const date = `${year}-${month}-${day}`;
+                        const date = `${year}-${month}-${day}`; // lexically sortable
                         const [previousDateClaims, previousDateClaimsFirstTimers] = claimsPerDate.get(date) || [0, 0];
                         claimsPerDate.set(date, [
                             previousDateClaims + 1,
@@ -100,10 +104,10 @@ export async function createStatistics(
 
     const repeatClaimers = [...claimsPerAddress.entries()]
         .filter(([, claims]) => claims > 1)
-        .sort(([, claimsA], [, claimsB]) => claimsB - claimsA);
+        .sort(([, claimsA], [, claimsB]) => claimsB - claimsA); // sort descending
 
     const claimsPerDateSorted = [...claimsPerDate.entries()]
-        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB));
+        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB)); // sort ascending
 
     const percentFormatter = new Intl.NumberFormat('en-US', {
         style: 'percent',

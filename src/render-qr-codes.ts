@@ -55,7 +55,7 @@ function initCanvas(): CanvasInit {
     const canvas = createCanvas(canvasSize, canvasSize, 'svg');
     const context = canvas.getContext('2d');
     context.quality = 'best';
-    context.patternQuality = 'best';
+    context.patternQuality = 'best'; // Affects pattern (gradient, image, etc.) rendering quality.
     return { canvas, context };
 }
 
@@ -100,6 +100,7 @@ export default renderQrCodes;
 // CLI interface
 if (import.meta.url === `file://${process.argv[1]}`) {
     // We're run directly
+    // Provide a little utility for rendering a single QR code in Nimiq style.
     (async () => {
         console.log('Create a Nimiq style QR code by providing its content and filename.');
         const rl = readline.createInterface({
@@ -132,6 +133,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         createQrCode(filepath, content, {
             fill: {
                 type: 'radial-gradient',
+                // circle centered in bottom right corner with radius of the size of qr code diagonal
                 position: [1, 1, 0, 1, 1, Math.sqrt(2)],
                 colorStops: color === 'light-blue'
                     ? [[0, '#265DD7'], [1, '#0582CA']]

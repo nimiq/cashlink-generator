@@ -9,8 +9,6 @@
  * - Claim unclaimed cashlinks
  * - Generate QR codes and coin images
  * - Create usage statistics
- *
- * The tool supports both interactive CLI usage and programmatic integration.
  */
 
 import { getConfig } from './config';
@@ -93,12 +91,13 @@ async function promptCashlinkTheme(oldCashlinkTheme?: number): Promise<number> {
     const cashlinkTheme = await prompt(`${oldCashlinkTheme !== undefined ? 'New ' : ''}Cashlink theme `
         + `[UNSPECIFIED/`
         + Object.keys(CashlinkTheme)
+            // filter out https://www.typescriptlang.org/docs/handbook/enums.html#reverse-mappings and UNSPECIFIED
             .filter((name) => !/^(UNSPECIFIED|\d+)$/i.test(name))
             .map((name) => name.toLowerCase())
             .join('/')
-        + '/0..255'
+        + '/0..255' // ability to specify theme as a number for themes that are not defined in HubApi yet
         + (oldCashlinkTheme !== undefined
-            ? `; old theme: ${CashlinkTheme[oldCashlinkTheme]?.toLowerCase() || oldCashlinkTheme}`
+            ? `; old theme: ${CashlinkTheme[oldCashlinkTheme]?.toLowerCase() || oldCashlinkTheme}` // reverse map or num
             : '')
         + ']: '
     );
@@ -114,6 +113,7 @@ interface MutableStdout extends Writable {
 /**
  * Securely prompts for private key input
  * Hides input from display and processes backup words
+ * Request backup words. Supports multiline input (pasting words separated by newlines).
  * @returns Promise resolving to private key bytes
  */
 async function promptPrivateKey(): Promise<Uint8Array> {
@@ -143,9 +143,10 @@ async function promptPrivateKey(): Promise<Uint8Array> {
         mutableStdout.muted = true;
 
         rl.on('line', (line) => {
+            // split at whitespace and strip numbers for direct copying from Nimiq Keyguard
             backupWords.push(...line.split(/\d*\s+\d*|\d+/g).filter((word) => !!word));
             if (backupWords.length < 24) return;
-            console.log();
+            console.log(); // print new line
             rl.close();
         });
 
@@ -177,8 +178,9 @@ function createCashlinks(
     cashlinkMessage: string,
     cashlinkTheme: number
 ): Map<string, Cashlink> {
-    const cashlinks = new Map<string, Cashlink>();
+    const cashlinks = new Map<string, Cashlink>(); // token -> cashlink
     const config = getConfig();
+    // secret salt to deterministically calculate cashlinks from random tokens
     const secretSalt = BufferUtils.fromBase64(config.salt);
 
     while (cashlinks.size < cashlinkCount) {
@@ -274,7 +276,7 @@ async function wizardCreateImages(
         console.log('\nRendering QR Codes');
         const links = shortLinks
             || new Map([...cashlinks].map(([token, cashlink]) => [token, cashlink.render()]));
-        imageFiles = renderQrCodes(links, folder); // Remove Object.entries - it's already a Map
+        imageFiles = renderQrCodes(links, folder);
         console.log('QR Codes rendered.\n');
     } else {
         console.log('\nRendering CashCoins');
@@ -297,7 +299,15 @@ async function wizardFundCashlinks(cashlinks: Map<string, Cashlink>, rpcClient: 
 
     console.log('\nBefore funding the Cashlinks, please check the generated assets.');
     console.log('To continue with funding, please import an account via its backup words to use for funding and make '
-        + `sure it holds at least ${totalValue / 1e5} NIM (with fees: ${(totalValue) / 1e5} NIM).`);
+        + `sure it holds at least ${totalValue / 1e5} NIM (with fees ${(totalValue + fee * cashlinks.size) / 1e5} NIM).`
+        // The past showed that it's recommendable to create separate keys for each Cashlink campaign for better
+        // bookkeeping, for example if unclaimed Cashlinks are to be reclaimed, they can be reclaimed to the funding
+        // address that was created just for that campaign and then be sent back to some more generic marketing account
+        // from there. Using a regularly used key instead of a separate key is not recommended and can be inconvenient
+        // because Cashlink generation and reclaiming leads to a lot of transactions on that address which clutter the
+        // transaction history and are extra effort to sync in the Wallet because it matches each Cashlink with its
+        // final recipient, so has to end up querying each Cashlink address as well.
+        + 'Note that it\'s recommendable to create a new key only for this operation.');
 
     const privateKeyBytes = await promptPrivateKey();
     const privateKey = PrivateKey.deserialize(new SerialBuffer(privateKeyBytes));
@@ -541,6 +551,7 @@ async function main() {
         }
 
         if (operations.includes(Operation.FUND)) {
+            // fund after export, to make sure the cashlinks were saved, if needed
             await wizardFundCashlinks(cashlinks, client);
         }
 

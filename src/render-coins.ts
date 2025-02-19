@@ -59,7 +59,7 @@ function initCanvas(): { canvas: Canvas; context: CanvasRenderingContext2D } {
     const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT, 'svg');
     const context = canvas.getContext('2d');
     context.quality = 'best';
-    context.patternQuality = 'best';
+    context.patternQuality = 'best'; // Affects pattern (gradient, image, etc.) rendering quality.
     return { canvas, context };
 }
 
@@ -91,7 +91,7 @@ function drawHexagon(
     // Note that the radius is the same as the full side lengths.
     const height = calculateHexHeight(radius);
 
-    // Explicitly type corners as array of tuples
+    // Corners of the hexagon if it wouldn't be rounded.
     const virtualCorners: [number, number][] = [
         [centerX + radius / 2, centerY + height / 2], // right bottom
         [centerX + radius, centerY + 0], // right center
@@ -117,7 +117,7 @@ function drawHexagon(
     const cornerArcOffset = borderRadius / Math.cos(Math.PI / 6); // line from virtual corner to arc center
     const relativeCornerArcOffset = cornerArcOffset / radius;
 
-    // compute lines with explicit tuple typing
+    // compute lines
     const lines: Point[] = [];
     for (let i = 0; i < 6; ++i) {
         const j = (i + 1) % 6;

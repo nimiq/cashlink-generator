@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const ENV_FILE = path.join(__dirname, '../.env');
-const SECRET_SALT_LENGTH = 128;
+const SECRET_SALT_LENGTH = 128; // overkill, but also doesn't hurt
 
 async function promptUser(question: string): Promise<string> {
     const rl = readline.createInterface({
@@ -66,7 +66,7 @@ NETWORK=test
 # Length of cashlink tokens in characters
 TOKEN_LENGTH=6
 
-# Salt for cashlink generation (base64 encoded)
+# Salt for cashlink generation (base64 encoded). Must be kept secret.
 SALT=${secretBase64}
 `;
         envContent = envContent || defaultEnv;
