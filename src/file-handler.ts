@@ -13,7 +13,6 @@
  */
 
 import fs from 'fs';
-import { PrivateKey, KeyPair } from '@nimiq/core';
 import { BufferUtils } from '@nimiq/core';
 import { Cashlink } from './cashlink';
 
@@ -41,40 +40,10 @@ export function importCashlinks(file: string): ImportedData {
     const imageFiles = new Map<string, string>();
 
     for (const line of lines) {
-        const [token, shortLink, imageFile, cashlinkUrl, privateKeyBase64] = line.split(',');
+        const [token, shortLink, imageFile, cashlinkUrl] = line.split(',');
 
         try {
-            // Extract private key from base64
-            const privateKeyBytes = BufferUtils.fromBase64Url(privateKeyBase64);
-            const privateKey = PrivateKey.deserialize(privateKeyBytes);
-            const keyPair = KeyPair.derive(privateKey);
-
-            // Parse the cashlink URL to get parameters
-            const url = new URL(cashlinkUrl);
-            const hashPart = url.hash.substring(1); // Remove leading #
-            const [encodedData] = hashPart.split(',');
-            const decodedData = BufferUtils.fromBase64Url(encodedData);
-
-            // Create a proper SerialBuffer to correctly read the uint64 value
-            const privateKeySize = privateKey.serializedSize;
-            decodedData.read(privateKeySize); // Skip the private key bytes
-            const value = decodedData.readUint64(); // Correctly read the 64-bit value
-
-            // Read message if present
-            let message = '';
-            if (decodedData.readPos < decodedData.byteLength) {
-                const messageLength = decodedData.readUint8();
-                const messageBytes = decodedData.read(messageLength);
-                message = new TextDecoder().decode(messageBytes);
-            }
-
-            // Create cashlink with parsed data
-            const cashlink = new Cashlink(
-                cashlinkUrl.split('#')[0],
-                keyPair,
-                value,
-                message,
-            );
+            const cashlink = Cashlink.parse(cashlinkUrl);
 
             cashlinks.set(token, cashlink);
             if (shortLink !== '') shortLinks.set(token, shortLink);

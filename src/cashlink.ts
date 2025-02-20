@@ -59,7 +59,9 @@ export class Cashlink {
             .replace(/=*$/, (match) => new Array(match.length).fill('.').join(''));
         const buf = BufferUtils.fromBase64Url(hash);
 
-        const keyPair = KeyPair.derive(PrivateKey.deserialize(buf));
+        const privateKeyBytes = buf.read(PrivateKey.SIZE);
+        const privateKey = PrivateKey.deserialize(privateKeyBytes);
+        const keyPair = KeyPair.derive(privateKey);
         const value = buf.readUint64();
         let message = '';
         if (buf.readPos !== buf.byteLength) {
