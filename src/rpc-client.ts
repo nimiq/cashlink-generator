@@ -50,7 +50,7 @@ export class RpcClient {
     async isConnected(): Promise<boolean> {
         try {
             const { data } = await this._client.blockchain.getBlockNumber();
-            return data !== undefined;
+            return Number.isInteger(data);
         } catch (e) {
             return false;
         }
@@ -62,7 +62,8 @@ export class RpcClient {
      */
     async isConsensusEstablished(): Promise<boolean> {
         const { data } = await this._client.consensus.isConsensusEstablished();
-        return Boolean(data);
+        if (typeof data !== 'boolean') throw new Error('Failed to check for consensus');
+        return data;
     }
 
     /**
@@ -71,6 +72,7 @@ export class RpcClient {
      */
     async getBlockHeight(): Promise<number> {
         const { data } = await this._client.blockchain.getBlockNumber();
+        if (!Number.isInteger(data)) throw new Error('Failed to fetch block height');
         return Number(data);
     }
 
@@ -81,6 +83,7 @@ export class RpcClient {
      */
     async getBalance(address: string): Promise<number> {
         const { data } = await this._client.blockchain.getAccountByAddress(address);
+        if (!data) throw new Error('Failed to fetch balance');
         return Number(data.balance);
     }
 
@@ -90,18 +93,12 @@ export class RpcClient {
      * @returns Promise resolving to the transaction hash
      */
     async sendTransaction(params: TransactionParams): Promise<string> {
-        try {
-            const { data } = await this._client.consensus.sendTransaction({
-                ...params,
-                relativeValidityStartHeight: 0,
-            });
-            if (!data) throw new Error('Failed to send transaction');
-            return data;
-        } catch (error) {
-            console.error('RPC Error details:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to send transaction: ${errorMessage}`);
-        }
+        const { data } = await this._client.consensus.sendTransaction({
+            ...params,
+            relativeValidityStartHeight: 0,
+        });
+        if (!data) throw new Error('Failed to send transaction');
+        return data;
     }
 
     /**
@@ -110,30 +107,25 @@ export class RpcClient {
      * @returns Promise resolving to the transaction hash
      */
     async sendRawTransaction(params: RawTransactionParams): Promise<string> {
-        try {
-            const blockHeight = await this.getBlockHeight();
-            // Create transaction using TransactionBuilder
-            const transaction = TransactionBuilder.newBasic(
-                params.sender.publicKey.toAddress(),
-                Address.fromUserFriendlyAddress(params.recipient),
-                BigInt(params.value),
-                BigInt(params.fee || 0),
-                blockHeight,
-                5,
-            );
+        const blockHeight = await this.getBlockHeight();
+        // Create transaction using TransactionBuilder
+        const transaction = TransactionBuilder.newBasic(
+            params.sender.publicKey.toAddress(),
+            Address.fromUserFriendlyAddress(params.recipient),
+            BigInt(params.value),
+            BigInt(params.fee || 0),
+            blockHeight,
+            5,
+        );
 
-            // Sign the transaction
-            transaction.sign(params.sender);
+        // Sign the transaction
+        transaction.sign(params.sender);
 
-            const { data } = await this._client.consensus.sendRawTransaction({
-                rawTransaction: BufferUtils.toHex(transaction.serialize()),
-            });
-            return data;
-        } catch (error) {
-            console.error('Raw transaction error:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to send raw transaction: ${errorMessage}`);
-        }
+        const { data } = await this._client.consensus.sendRawTransaction({
+            rawTransaction: BufferUtils.toHex(transaction.serialize()),
+        });
+        if (!data) throw new Error('Failed to send raw transaction');
+        return data;
     }
 
     /**
@@ -142,18 +134,12 @@ export class RpcClient {
      * @returns Promise resolving to import result
      */
     async importWalletKey(keyData: string): Promise<string> {
-        try {
-            const { data } = await this._client.wallet.importRawKey({
-                keyData,
-                passphrase: '',
-            });
-            if (!data) throw new Error('Failed to import wallet key');
-            return data;
-        } catch (error) {
-            console.error('Wallet import error:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to import wallet key: ${errorMessage}`);
-        }
+        const { data } = await this._client.wallet.importRawKey({
+            keyData,
+            passphrase: '',
+        });
+        if (!data) throw new Error('Failed to import wallet key');
+        return data;
     }
 
     /**
@@ -161,15 +147,9 @@ export class RpcClient {
      * @returns Promise resolving to array of addresses
      */
     async listWalletAccounts(): Promise<string[]> {
-        try {
-            const { data } = await this._client.wallet.listAccounts();
-            if (!data) throw new Error('Failed to list wallet accounts');
-            return data;
-        } catch (error) {
-            console.error('Wallet list accounts error:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to list wallet accounts: ${errorMessage}`);
-        }
+        const { data } = await this._client.wallet.listAccounts();
+        if (!data) throw new Error('Failed to list wallet accounts');
+        return data;
     }
 
     /**
@@ -178,15 +158,9 @@ export class RpcClient {
      * @returns Promise resolving to import status
      */
     async isWalletAccountImported(address: string): Promise<boolean> {
-        try {
-            const { data } = await this._client.wallet.isAccountImported(address);
-            if (data === undefined) throw new Error('Failed to check if wallet account is imported');
-            return Boolean(data);
-        } catch (error) {
-            console.error('Wallet account check error:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to check wallet account: ${errorMessage}`);
-        }
+        const { data } = await this._client.wallet.isAccountImported(address);
+        if (typeof data !== 'boolean') throw new Error('Failed to check if wallet account is imported');
+        return data;
     }
 
     /**
@@ -196,16 +170,10 @@ export class RpcClient {
      * @param duration - Optional duration in milliseconds
      * @returns Promise resolving to unlock status
      */
-    async unlockWalletAccount(address: string, passphrase: string = '', duration?: number): Promise<boolean> {
-        try {
-            const { data } = await this._client.wallet.unlockAccount(address, { passphrase, duration });
-            if (data === undefined) throw new Error('Failed to unlock wallet account');
-            return Boolean(data);
-        } catch (error) {
-            console.error('Wallet unlock error:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to unlock wallet account: ${errorMessage}`);
-        }
+    async unlockWalletAccount(address: string, passphrase: string = '', duration?: number): Promise<true> {
+        const { data } = await this._client.wallet.unlockAccount(address, { passphrase, duration });
+        if (!data) throw new Error('Failed to unlock wallet account');
+        return true;
     }
 
     /**
@@ -214,15 +182,9 @@ export class RpcClient {
      * @returns Promise resolving to unlock status
      */
     async isWalletAccountUnlocked(address: string): Promise<boolean> {
-        try {
-            const { data } = await this._client.wallet.isAccountUnlocked(address);
-            if (data === undefined) throw new Error('Failed to check if wallet account is unlocked');
-            return Boolean(data);
-        } catch (error) {
-            console.error('Wallet unlock check error:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to check wallet account unlock status: ${errorMessage}`);
-        }
+        const { data } = await this._client.wallet.isAccountUnlocked(address);
+        if (typeof data !== 'boolean') throw new Error('Failed to check if wallet account is unlocked');
+        return data;
     }
 
     /**
@@ -231,21 +193,15 @@ export class RpcClient {
      * @returns Promise resolving to array of transactions
      */
     async getTransactionsByAddress(address: string): Promise<Transaction[]> {
-        try {
-            const params = {
-                max: 500,
-                justHashes: false,
-                startAt: null as unknown as string, // startAt is in fact optional in core-rs-albatross, but not in type
-            };
+        const params = {
+            max: 500,
+            justHashes: false,
+            startAt: null as unknown as string, // startAt is in fact optional in core-rs-albatross, but not in type
+        };
 
-            const { data } = await this._client.blockchain.getTransactionsByAddress(address, params);
+        const { data } = await this._client.blockchain.getTransactionsByAddress(address, params);
 
-            if (!data) throw new Error('Failed to get transactions');
-            return data;
-        } catch (error) {
-            console.error('Get transactions error:', error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to get transactions: ${errorMessage}`);
-        }
+        if (!data) throw new Error('Failed to get transactions');
+        return data;
     }
 }
