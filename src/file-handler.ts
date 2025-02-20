@@ -70,7 +70,7 @@ export function importCashlinks(file: string): ImportedData {
 
             // Create cashlink with parsed data
             const cashlink = new Cashlink(
-                url.origin + (url.pathname.includes('/cashlink') ? url.pathname : '/cashlink'),
+                cashlinkUrl.split('#')[0],
                 keyPair,
                 value,
                 message,
@@ -106,16 +106,10 @@ export function exportCashlinks(
     const lines = [...cashlinks].map(([token, cashlink]) => {
         const shortLink = shortLinks?.get(token) || '';
         const imageFile = imageFiles.get(token) || '';
+        const cashlinkUrl = cashlink.render();
         const privateKeyBase64 = BufferUtils.toBase64Url(cashlink.keyPair.privateKey.serialize());
 
-        // Ensure the cashlink URL includes /cashlink/
-        const url = cashlink.render();
-        const urlObj = new URL(url);
-        const baseWithCashlink = urlObj.origin
-            + (urlObj.pathname.includes('/cashlink/') ? urlObj.pathname : '/cashlink/');
-        const finalUrl = `${baseWithCashlink}#${urlObj.hash.substring(1)}`;
-
-        return `${token},${shortLink},${imageFile},${finalUrl},${privateKeyBase64}`;
+        return `${token},${shortLink},${imageFile},${cashlinkUrl},${privateKeyBase64}`;
     });
 
     fs.writeFileSync(file, lines.join('\n'));

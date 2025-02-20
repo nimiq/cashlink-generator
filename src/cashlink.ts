@@ -59,12 +59,6 @@ export class Cashlink {
             .replace(/=*$/, (match) => new Array(match.length).fill('.').join(''));
         const buf = BufferUtils.fromBase64Url(hash);
 
-        // Ensure we preserve the /cashlink/ part in the URL if it exists
-        const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-        const finalBaseUrl = normalizedBaseUrl.includes('/cashlink') ?
-            normalizedBaseUrl :
-            `${normalizedBaseUrl}/cashlink`;
-
         const keyPair = KeyPair.derive(PrivateKey.deserialize(buf));
         const value = buf.readUint64();
         let message = '';
@@ -78,7 +72,7 @@ export class Cashlink {
             theme = buf.readUint8();
         }
 
-        return new Cashlink(finalBaseUrl, keyPair, value, message, theme);
+        return new Cashlink(baseUrl, keyPair, value, message, theme);
     }
 
     /**
