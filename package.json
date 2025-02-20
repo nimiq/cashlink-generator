@@ -7,7 +7,8 @@
     "start": "NODE_OPTIONS='--no-deprecation' tsx src/index.ts",
     "secret": "NODE_OPTIONS='--no-deprecation' tsx scripts/create-secret.ts",
     "test": "NODE_OPTIONS='--no-deprecation' tsx test/index.ts",
-    "qr": "NODE_OPTIONS='--no-deprecation' tsx src/render-qr-codes.ts"
+    "qr": "NODE_OPTIONS='--no-deprecation' tsx src/render-qr-codes.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "Nimiq, nimiq.com",
@@ -18,7 +19,8 @@
     "@nimiq/core": "^2.0.6",
     "canvas": "^3.1.0",
     "dotenv": "^16.4.7",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
   },
   "type": "module",
   "devDependencies": {

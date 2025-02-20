@@ -45,8 +45,8 @@ export class Cashlink {
     private _baseUrl: string;
     private _keyPair: KeyPair;
     private _value: number;
-    private _messageBytes: Uint8Array;
-    private _theme: number;
+    private _messageBytes: Uint8Array = new Uint8Array();
+    private _theme: number = CashlinkTheme.UNSPECIFIED;
 
     /**
      * Parse a cashlink from its string representation

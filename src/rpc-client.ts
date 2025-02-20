@@ -1,4 +1,4 @@
-import { NimiqRPCClient, Transaction } from '@blouflash/nimiq-rpc';
+import { NimiqRPCClient, type Transaction } from '@blouflash/nimiq-rpc';
 import { KeyPair, Address, TransactionBuilder, BufferUtils } from '@nimiq/core';
 
 /** Parameters for sending a transaction */
@@ -98,15 +98,15 @@ export class RpcClient {
         if (!data) {
             throw new Error('Transaction not found');
         }
-        return data as Transaction;
+        return data;
     }
 
     /**
      * Sends a transaction
      * @param params - Transaction parameters
-     * @returns Promise resolving to transaction result
+     * @returns Promise resolving to the transaction hash
      */
-    async sendTransaction(params: TransactionParams) {
+    async sendTransaction(params: TransactionParams): Promise<string> {
         try {
             const { data } = await this._client.consensus.sendTransaction({
                 ...params,
@@ -124,9 +124,9 @@ export class RpcClient {
     /**
      * Sends a raw transaction using direct transaction creation and signing
      * @param params - Raw transaction parameters including KeyPair for signing
-     * @returns Promise resolving to transaction result
+     * @returns Promise resolving to the transaction hash
      */
-    async sendRawTransaction(params: RawTransactionParams) {
+    async sendRawTransaction(params: RawTransactionParams): Promise<string> {
         try {
             const blockHeight = await this.getBlockHeight();
             // Create transaction using TransactionBuilder
@@ -253,14 +253,10 @@ export class RpcClient {
             const params = {
                 max: 500,
                 justHashes: false,
-                startAt: null,
+                startAt: null as unknown as string, // startAt is in fact optional in core-rs-albatross, but not in type
             };
 
-            const { data } = await this._client.blockchain.getTransactionsByAddress(
-                address,
-                // @ts-ignore: startAt is in fact optional in params but not in type
-                params,
-            );
+            const { data } = await this._client.blockchain.getTransactionsByAddress(address, params);
 
             if (!data) throw new Error('Failed to get transactions');
             return data;

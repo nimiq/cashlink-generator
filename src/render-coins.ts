@@ -13,7 +13,7 @@
  */
 
 import fs from 'fs';
-import { createCanvas, registerFont, Canvas, CanvasRenderingContext2D } from 'canvas';
+import { createCanvas, registerFont, type Canvas, type CanvasRenderingContext2D } from 'canvas';
 import { Cashlink } from './cashlink';
 import QrCode from './qr-code';
 
@@ -169,10 +169,10 @@ function drawHexagon(
         const center: [number, number] = [
             virtualCorners[j][0] - relativeCornerArcOffset * (virtualCorners[j][0] - centerX),
             virtualCorners[j][1] - relativeCornerArcOffset * (virtualCorners[j][1] - centerY),
-        ] as [number, number];
+        ];
 
-        const startAngle = arcPointToAngle(lines[i].end as [number, number], center, borderRadius);
-        const endAngle = arcPointToAngle(lines[j].start as [number, number], center, borderRadius);
+        const startAngle = arcPointToAngle(lines[i].end, center, borderRadius);
+        const endAngle = arcPointToAngle(lines[j].start, center, borderRadius);
         arcs.push({ center, startAngle, endAngle });
     }
 

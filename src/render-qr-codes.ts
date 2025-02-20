@@ -16,7 +16,7 @@ import fs from 'fs';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { createCanvas, Canvas, CanvasRenderingContext2D } from 'canvas';
+import { createCanvas, type Canvas, type CanvasRenderingContext2D } from 'canvas';
 import QrCode from './qr-code';
 
 /**

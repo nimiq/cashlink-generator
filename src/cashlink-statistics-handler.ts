@@ -12,10 +12,10 @@
  * The statistics handler provides detailed insights into cashlink usage patterns.
  */
 
-import { Address } from '@nimiq/core';
-import { Transaction as RpcTransaction } from '@blouflash/nimiq-rpc';
-import { RpcClient } from './rpc-client';
-import { Cashlink } from './cashlink';
+import { type Address } from '@nimiq/core';
+import { type Transaction as RpcTransaction } from '@blouflash/nimiq-rpc';
+import { type RpcClient } from './rpc-client';
+import { type Cashlink } from './cashlink';
 
 /**
  * Creates comprehensive statistics for a set of cashlinks
@@ -63,6 +63,7 @@ export async function createStatistics(
 
                 for (const tx of transactionObjects) {
                     const { to: recipient, timestamp } = tx;
+                    if (!timestamp) continue; // not yet included in a block
 
                     if (recipient === cashlinkUserFriendlyAddress) {
                         wasFunded = true;
@@ -76,8 +77,7 @@ export async function createStatistics(
                             { value: month },,
                             { value: day },,
                             { value: year },
-                            //@ts-ignore
-                        ] = dateFormatter.formatToParts(timestamp * 1000);
+                        ] = dateFormatter.formatToParts(Number(timestamp) * 1000);
                         const date = `${year}-${month}-${day}`; // lexically sortable
                         const [previousDateClaims, previousDateClaimsFirstTimers] = claimsPerDate.get(date) || [0, 0];
                         claimsPerDate.set(date, [

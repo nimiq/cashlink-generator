@@ -47,7 +47,7 @@ export interface NodeConfig {
  * @param network - Network identifier ('main' or 'test')
  * @returns Complete base URL for cashlinks
  */
-export function getCashlinkBaseUrl(network: string): string {
+export function getCashlinkBaseUrl(network: 'main' | 'test'): string {
     return `https://hub.nimiq${network === 'main' ? '' : '-testnet'}.com/cashlink/`;
 }
 
@@ -59,6 +59,7 @@ export function getCashlinkBaseUrl(network: string): string {
  */
 export function getConfig(): NodeConfig {
     const network = assertEnvVar(process.env.NETWORK, 'NETWORK');
+    if (network !== 'main' && network !== 'test') throw new Error(`Invalid network ${network}`);
     return {
         nodeIp: assertEnvVar(process.env.NODE_IP, 'NODE_IP'),
         nodePort: assertEnvVar(process.env.NODE_PORT, 'NODE_PORT'),

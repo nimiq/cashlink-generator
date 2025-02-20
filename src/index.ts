@@ -104,10 +104,6 @@ async function promptCashlinkTheme(oldCashlinkTheme?: number): Promise<number> {
         || CashlinkTheme.UNSPECIFIED;
 }
 
-interface MutableStdout extends Writable {
-    muted: boolean;
-}
-
 /**
  * Securely prompts for private key input
  * Hides input from display and processes backup words
@@ -115,14 +111,26 @@ interface MutableStdout extends Writable {
  * @returns Promise resolving to private key bytes
  */
 async function promptPrivateKey(): Promise<Uint8Array> {
-    const mutableStdout = new Writable({
-        write: function(chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void) {
-            if (!(this as MutableStdout).muted) {
-                process.stdout.write(chunk, encoding);
-            }
-            callback();
+    const mutableStdout = new (class MutableStdout extends Writable {
+        private state: { muted: boolean };
+
+        constructor() {
+            const state = { muted: false };
+            super({
+                write: function(chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void) {
+                    if (!state.muted) {
+                        process.stdout.write(chunk, encoding);
+                    }
+                    callback();
+                },
+            });
+            this.state = state;
         }
-    }) as MutableStdout;
+
+        set muted(shouldMute: boolean) {
+            this.state.muted = shouldMute;
+        }
+    })();
 
     const rl = readline.createInterface({
         input: process.stdin,
@@ -443,7 +451,7 @@ async function wizardClaimCashlinks(
  * @returns Boolean indicating if the message was changed
  */
 async function wizardChangeMessage(cashlinks: Map<string, Cashlink>): Promise<boolean> {
-    const oldCashlinkMessage = cashlinks.values().next().value.message;
+    const oldCashlinkMessage = cashlinks.values().next().value?.message || '';
     const newCashlinkMessage = (
         await prompt(`New Cashlink message ["none"/message, old message: "${oldCashlinkMessage}"]: `)
         || oldCashlinkMessage
@@ -469,7 +477,7 @@ async function wizardChangeMessage(cashlinks: Map<string, Cashlink>): Promise<bo
  * @returns Boolean indicating if the theme was changed
  */
 async function wizardChangeTheme(cashlinks: Map<string, Cashlink>): Promise<boolean> {
-    const oldCashlinkTheme = cashlinks.values().next().value.theme;
+    const oldCashlinkTheme = cashlinks.values().next().value?.theme || CashlinkTheme.UNSPECIFIED;
     const newCashlinkTheme = await promptCashlinkTheme(oldCashlinkTheme);
 
     if (oldCashlinkTheme === newCashlinkTheme) {
