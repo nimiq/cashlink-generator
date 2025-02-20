@@ -76,7 +76,7 @@ export function exportCashlinks(
         const shortLink = shortLinks?.get(token) || '';
         const imageFile = imageFiles.get(token) || '';
         const cashlinkUrl = cashlink.render();
-        const privateKeyBase64 = BufferUtils.toBase64Url(cashlink.keyPair.privateKey.serialize());
+        const privateKeyBase64 = BufferUtils.toBase64(cashlink.keyPair.privateKey.serialize());
 
         return `${token},${shortLink},${imageFile},${cashlinkUrl},${privateKeyBase64}`;
     });
