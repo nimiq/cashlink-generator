@@ -125,9 +125,8 @@ export class RpcClient {
             // Sign the transaction
             transaction.sign(params.sender);
 
-            const { data } = await this._client.call<any>({
-                method: 'sendRawTransaction',
-                params: [ BufferUtils.toHex(transaction.serialize())],
+            const { data } = await this._client.consensus.sendRawTransaction({
+                rawTransaction: BufferUtils.toHex(transaction.serialize()),
             });
             return data;
         } catch (error) {
