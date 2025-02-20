@@ -85,23 +85,6 @@ export class RpcClient {
     }
 
     /**
-     * Gets transaction details by hash
-     * @param txHash - The transaction hash
-     * @returns Promise resolving to transaction details
-     * @throws If transaction not found or hash invalid
-     */
-    async getTransactionReceipt(txHash: string): Promise<Transaction> {
-        if (!txHash || typeof txHash !== 'string') {
-            throw new Error('Invalid transaction hash');
-        }
-        const { data } = await this._client.blockchain.getTransactionByHash(txHash);
-        if (!data) {
-            throw new Error('Transaction not found');
-        }
-        return data;
-    }
-
-    /**
      * Sends a transaction
      * @param params - Transaction parameters
      * @returns Promise resolving to the transaction hash

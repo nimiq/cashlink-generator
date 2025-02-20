@@ -56,12 +56,11 @@ async function main() {
     console.log(`Balance for ${address}:`, balance);
 
     /**
-     * Test 5: Transaction Receipt
-     * Verifies transaction receipt retrieval functionality
+     * Test 5: Transactions by Address
+     * Tests transaction retrieval for a specific address
      */
-    const txHash = 'd15bd926ad0c0e52346badf29cc128a26369d13a45498ad5e6a122f986054132';
-    const transaction = await client.getTransactionReceipt(txHash);
-    console.log(`Transaction ${txHash} was sent on block: `,transaction.blockNumber);
+    const transactions = await client.getTransactionsByAddress(address);
+    console.log(`Received ${transactions.length} transactions.`);
 
     console.log('All tasks completed successfully');
     process.exit(0);
