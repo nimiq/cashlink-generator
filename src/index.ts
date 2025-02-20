@@ -110,7 +110,7 @@ async function promptCashlinkTheme(oldCashlinkTheme?: number): Promise<number> {
  * Request backup words. Supports multiline input (pasting words separated by newlines).
  * @returns Promise resolving to private key bytes
  */
-async function promptPrivateKey(): Promise<Uint8Array> {
+async function promptPrivateKey(): Promise<PrivateKey> {
     const mutableStdout = new (class MutableStdout extends Writable {
         private state: { muted: boolean };
 
@@ -158,7 +158,7 @@ async function promptPrivateKey(): Promise<Uint8Array> {
         rl.on('close', () => {
             const extendedPrivateKey = MnemonicUtils.mnemonicToExtendedPrivateKey(backupWords.join(' '));
             const privateKey = extendedPrivateKey.derivePath(`m/44'/242'/0'/0'`).privateKey;
-            resolve(privateKey.serialize());
+            resolve(privateKey);
         });
     });
 }
@@ -313,8 +313,7 @@ async function wizardFundCashlinks(cashlinks: Map<string, Cashlink>, rpcClient: 
         // final recipient, so has to end up querying each Cashlink address as well.
         + 'Note that it\'s recommendable to create a new key only for this operation.');
 
-    const privateKeyBytes = await promptPrivateKey();
-    const privateKey = PrivateKey.deserialize(new SerialBuffer(privateKeyBytes));
+    const privateKey = await promptPrivateKey();
     const address = PublicKey.derive(privateKey).toAddress();
     const userFriendlyAddress = address.toUserFriendlyAddress();
     const balance = await rpcClient.getBalance(userFriendlyAddress);
@@ -330,7 +329,7 @@ async function wizardFundCashlinks(cashlinks: Map<string, Cashlink>, rpcClient: 
     const isImported = await rpcClient.isWalletAccountImported(userFriendlyAddress);
     if (!isImported) {
         console.log('Importing wallet key...');
-        await rpcClient.importWalletKey(BufferUtils.toHex(privateKeyBytes));
+        await rpcClient.importWalletKey(privateKey.toHex());
     }
 
     // Unlock the account
