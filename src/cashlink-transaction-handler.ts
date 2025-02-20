@@ -80,7 +80,7 @@ export async function claimCashlinks(
                 recipient: recipient.toUserFriendlyAddress(),
                 value: cashlinkBalance,
                 fee: 0,
-                data: BufferUtils.toHex(CashlinkExtraData.CLAIMING),
+                data: CashlinkExtraData.CLAIMING,
             });
         }
 

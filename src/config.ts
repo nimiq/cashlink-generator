@@ -36,7 +36,7 @@ function assertEnvVar(value: string | undefined, name: string): string {
 export interface NodeConfig {
     nodeIp: string;
     nodePort: string;
-    network: string;
+    network: 'main' | 'test';
     tokenLength: number;
     salt: string;
     cashlinkBaseUrl: string;

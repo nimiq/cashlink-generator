@@ -1,5 +1,6 @@
 import { NimiqRPCClient, type Transaction } from '@blouflash/nimiq-rpc';
-import { KeyPair, Address, TransactionBuilder, BufferUtils } from '@nimiq/core';
+import { KeyPair, Address, TransactionBuilder } from '@nimiq/core';
+import { getConfig } from './config';
 
 /** Parameters for sending a transaction */
 interface BaseTransactionParams {
@@ -17,7 +18,7 @@ export interface RawTransactionParams {
     recipient: string;
     value: number;
     fee?: number;
-    data?: string;
+    data?: Uint8Array;
 }
 
 /**
@@ -108,21 +109,26 @@ export class RpcClient {
      */
     async sendRawTransaction(params: RawTransactionParams): Promise<string> {
         const blockHeight = await this.getBlockHeight();
+        const networkId = {
+            main: 24,
+            test: 5,
+        }[getConfig().network];
         // Create transaction using TransactionBuilder
-        const transaction = TransactionBuilder.newBasic(
+        const transaction = TransactionBuilder.newBasicWithData(
             params.sender.publicKey.toAddress(),
             Address.fromUserFriendlyAddress(params.recipient),
+            params.data || new Uint8Array(),
             BigInt(params.value),
             BigInt(params.fee || 0),
             blockHeight,
-            5,
+            networkId,
         );
 
         // Sign the transaction
         transaction.sign(params.sender);
 
         const { data } = await this._client.consensus.sendRawTransaction({
-            rawTransaction: BufferUtils.toHex(transaction.serialize()),
+            rawTransaction: transaction.toHex(),
         });
         if (!data) throw new Error('Failed to send raw transaction');
         return data;
