@@ -78,7 +78,4 @@ async function createSecret(): Promise<void> {
 }
 
 // Execute immediately
-createSecret().catch((error) => {
-    console.error('Error:', error instanceof Error ? error.message : 'Unknown error');
-    process.exit(1);
-});
+await createSecret();

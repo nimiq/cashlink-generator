@@ -405,18 +405,12 @@ async function wizardImportCashlinks(): Promise<WizardResult & { imageFiles: Ima
         const folder = path.dirname(importedFile);
         console.log(`Using folder: ${folder}`);
 
-        try {
-            const result = importCashlinks(importedFile);
-            console.log(`${result.cashlinks.size} Cashlinks loaded.\n`);
-            return { ...result, folder };
-        } catch (e) {
-            throw new Error(`Failed to parse cashlinks file: ${e instanceof Error ? e.message : 'Unknown error'}`);
-        }
+        const result = importCashlinks(importedFile);
+        console.log(`${result.cashlinks.size} Cashlinks loaded.\n`);
+        return { ...result, folder };
     } catch (error) {
-        console.error('\nImport error:', error instanceof Error ? error.message : 'Unknown error');
-        if (await prompt('\nWould you like to create new cashlinks instead? [y/N]: ') === 'y') {
-            return null;
-        }
+        console.error('\nImport error:', error instanceof Error ? error.message : String(error));
+        if (await prompt('\nWould you like to create new cashlinks instead? [y/N]: ') === 'y') return null;
         throw error;
     }
 }
@@ -499,91 +493,80 @@ async function wizardChangeTheme(cashlinks: Map<string, Cashlink>): Promise<bool
  * including creation, modification, funding, and claiming
  */
 async function main() {
-    try {
-        const config = getConfig();
-        const client = new RpcClient(config.nodeIp, config.nodePort);
-        console.log('Welcome to the cashlink generator!\n');
+    const config = getConfig();
+    const client = new RpcClient(config.nodeIp, config.nodePort);
+    console.log('Welcome to the cashlink generator!\n');
 
-        // Initialize variables
-        let cashlinks: Map<string, Cashlink>;
-        let shortLinks: Map<string, string> | null;
-        let imageFiles: ImageFiles = new Map();
-        let folder: string;
-        let operations: OperationType[];
-        let shouldExport = false;
+    // Initialize variables
+    let cashlinks: Map<string, Cashlink>;
+    let shortLinks: Map<string, string> | null;
+    let imageFiles: ImageFiles = new Map();
+    let folder: string;
+    let operations: OperationType[];
+    let shouldExport = false;
 
-        // Handle import or create new cashlinks
-        const importResult = await wizardImportCashlinks();
-        if (importResult) {
-            ({ cashlinks, shortLinks, imageFiles, folder } = importResult);
-            const operation = await prompt(
-                `What do you want to do? [${Object.values(Operation).join('/')}]: `,
-            );
-            if (!Object.values(Operation).includes(operation as OperationType)) {
-                throw new Error(`Unsupported operation ${operation}`);
-            }
-            operations = [operation as OperationType];
-        } else {
-            ({ cashlinks, shortLinks } = await wizardCreateCashlinks());
-            folder = createFolder();
-            operations = [Operation.CREATE_IMAGES, Operation.FUND];
-            shouldExport = true;
+    // Handle import or create new cashlinks
+    const importResult = await wizardImportCashlinks();
+    if (importResult) {
+        ({ cashlinks, shortLinks, imageFiles, folder } = importResult);
+        const operation = await prompt(`What do you want to do? [${Object.values(Operation).join('/')}]: `);
+        if (!Object.values(Operation).includes(operation as OperationType)) {
+            throw new Error(`Unsupported operation ${operation}`);
         }
-
-        // Process operations
-        if (operations.includes(Operation.CREATE_IMAGES)) {
-            const oldImageFiles = imageFiles;
-            imageFiles = await wizardCreateImages(cashlinks, shortLinks, folder);
-            shouldExport = shouldExport || !oldImageFiles.size
-                || oldImageFiles.values().next().value !== imageFiles.values().next().value;
-        }
-
-        if (operations.includes(Operation.CHANGE_MESSAGE)) {
-            shouldExport = shouldExport || await wizardChangeMessage(cashlinks);
-        }
-
-        if (operations.includes(Operation.CHANGE_THEME)) {
-            shouldExport = shouldExport || await wizardChangeTheme(cashlinks);
-        }
-
-        if (shouldExport) {
-            console.log('Exporting cashlinks.');
-            const file = `${folder || '.'}/cashlinks`
-                + (importResult ? ` (update ${getCurrentDateString()} ${operations.join(' ')})` : '')
-                + '.csv';
-            exportCashlinks(cashlinks, shortLinks, imageFiles, file);
-            console.log(`Cashlinks exported to ${file.replace(__dirname, '.')}.\n`);
-        }
-
-        if (operations.includes(Operation.FUND)) {
-            // fund after export, to make sure the cashlinks were saved, if needed
-            await wizardFundCashlinks(cashlinks, client);
-        }
-
-        if (operations.includes(Operation.STATISTICS)) {
-            await wizardCreateStatistics(cashlinks, folder, client);
-        }
-
-        if (operations.includes(Operation.CLAIM)) {
-            await wizardClaimCashlinks(cashlinks, client);
-        }
-
-        console.log('\nAll operations finished :)');
-        if (operations.includes(Operation.FUND) || operations.includes(Operation.CLAIM)) {
-            console.log(
-                'Transactions might still be pending in your local node and waiting to be relayed to other nodes.\n'
-                + 'Make sure to check your wallet balance and keep your node running if needed.',
-            );
-        }
-        process.exit(0);
-    } catch (error) {
-        console.error('Error:', error instanceof Error ? error.message : 'Unknown error');
-        process.exit(1);
+        operations = [operation as OperationType];
+    } else {
+        ({ cashlinks, shortLinks } = await wizardCreateCashlinks());
+        folder = createFolder();
+        operations = [Operation.CREATE_IMAGES, Operation.FUND];
+        shouldExport = true;
     }
+
+    // Process operations
+    if (operations.includes(Operation.CREATE_IMAGES)) {
+        const oldImageFiles = imageFiles;
+        imageFiles = await wizardCreateImages(cashlinks, shortLinks, folder);
+        shouldExport = shouldExport || !oldImageFiles.size
+            || oldImageFiles.values().next().value !== imageFiles.values().next().value;
+    }
+
+    if (operations.includes(Operation.CHANGE_MESSAGE)) {
+        shouldExport = shouldExport || await wizardChangeMessage(cashlinks);
+    }
+
+    if (operations.includes(Operation.CHANGE_THEME)) {
+        shouldExport = shouldExport || await wizardChangeTheme(cashlinks);
+    }
+
+    if (shouldExport) {
+        console.log('Exporting cashlinks.');
+        const file = `${folder || '.'}/cashlinks`
+            + (importResult ? ` (update ${getCurrentDateString()} ${operations.join(' ')})` : '')
+            + '.csv';
+        exportCashlinks(cashlinks, shortLinks, imageFiles, file);
+        console.log(`Cashlinks exported to ${file.replace(__dirname, '.')}.\n`);
+    }
+
+    if (operations.includes(Operation.FUND)) {
+        // fund after export, to make sure the cashlinks were saved, if needed
+        await wizardFundCashlinks(cashlinks, client);
+    }
+
+    if (operations.includes(Operation.STATISTICS)) {
+        await wizardCreateStatistics(cashlinks, folder, client);
+    }
+
+    if (operations.includes(Operation.CLAIM)) {
+        await wizardClaimCashlinks(cashlinks, client);
+    }
+
+    console.log('\nAll operations finished :)');
+    if (operations.includes(Operation.FUND) || operations.includes(Operation.CLAIM)) {
+        console.log(
+            'Transactions might still be pending in your local node and waiting to be relayed to other network nodes.\n'
+            + 'Make sure to check your wallet balance and keep your node running if needed.',
+        );
+    }
+    process.exit(0);
 }
 
-// Execute and handle unhandled rejections
-main().catch((error) => {
-    console.error('Unhandled error:', error);
-    process.exit(1);
-});
+await main();
