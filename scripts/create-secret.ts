@@ -1,30 +1,16 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { BufferUtils } from '@nimiq/core';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import readline from 'readline';
+import { BufferUtils } from '@nimiq/core';
+import { prompt } from '../src/utils';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const ENV_FILE = path.join(__dirname, '../.env');
 const SECRET_SALT_LENGTH = 128; // overkill, but also doesn't hurt
-
-async function promptUser(question: string): Promise<string> {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
-
-    return new Promise((resolve) => {
-        rl.question(question, (answer) => {
-            rl.close();
-            resolve(answer);
-        });
-    });
-}
 
 async function createSecret(): Promise<void> {
     let envContent: string | undefined;
@@ -35,7 +21,7 @@ async function createSecret(): Promise<void> {
         envContent = fs.readFileSync(ENV_FILE, 'utf8');
         existingSalt = envContent.match(/^SALT=(.*)$/m)?.[1];
         if (existingSalt) {
-            const replace = await promptUser('Existing salt found. Do you want to replace it? [y/N]: ');
+            const replace = await prompt('Existing salt found. Do you want to replace it? [y/N]: ');
             if (replace.toLowerCase() !== 'y') {
                 console.log('Keeping existing salt.');
                 return;

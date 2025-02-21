@@ -19,6 +19,7 @@ import { Writable } from 'stream';
 import { BufferUtils, SerialBuffer, Hash, PrivateKey, KeyPair, PublicKey, Address, MnemonicUtils } from '@nimiq/core';
 import crypto from 'crypto';
 import { getConfig } from './config';
+import { prompt } from './utils';
 import { RpcClient } from './rpc-client';
 import { Cashlink, CashlinkTheme } from './cashlink';
 import { exportCashlinks, importCashlinks } from './file-handler';
@@ -62,22 +63,6 @@ function createFolder(): string {
         fs.mkdirSync(folder, { recursive: true });
     }
     return folder;
-}
-
-/**
- * CLI prompt helper with proper readline interface
- * @param question - Prompt text to display
- * @returns User input as promise
- */
-async function prompt(question: string): Promise<string> {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-        terminal: true,
-    });
-    const response = await new Promise<string>((resolve) => rl.question(question, resolve));
-    rl.close();
-    return response;
 }
 
 /**

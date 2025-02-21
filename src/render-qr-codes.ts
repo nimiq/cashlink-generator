@@ -13,11 +13,11 @@
  */
 
 import fs from 'fs';
-import readline from 'readline';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createCanvas, type Canvas, type CanvasRenderingContext2D } from 'canvas';
 import QrCode from './qr-code';
+import { prompt } from './utils';
 
 /**
  * Canvas size and padding configuration
@@ -105,21 +105,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     // Provide a little utility for rendering a single QR code in Nimiq style.
     (async () => {
         console.log('Create a Nimiq style QR code by providing its content and filename.');
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-            terminal: true,
-        });
-
-        const content = await new Promise<string>((resolve) => rl.question('QR Content: ', resolve));
-        const color = await new Promise<string>((resolve) =>
-            rl.question('Color (light-blue/indigo; default indigo): ', resolve)) || 'indigo';
-        const errorCorrection = await new Promise<string>((resolve) =>
-            rl.question('Error Correction (L/M/Q/H; default M): ', resolve)) || 'M';
+        const content = await prompt('QR Content: ');
+        const color = await prompt('Color (light-blue/indigo; default indigo): ') || 'indigo';
+        const errorCorrection = await prompt('Error Correction (L/M/Q/H; default M): ') || 'M';
 
         let filename = `${content.replace(/https?:\/\//, '').replace(/[^A-Z0-9]+/gi, '-')}-${color}-${errorCorrection}`;
-        filename = await new Promise<string>((resolve) => rl.question(`Filename (default ${filename}): `, resolve))
-            || filename;
+        filename = await prompt(`Filename (default ${filename}): `) || filename;
 
         const currentDir = dirname(fileURLToPath(import.meta.url));
         const qrDir = join(currentDir, '..', 'generated-qr');
@@ -130,7 +121,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         }
 
         const filepath = join(qrDir, filename).replace(/(\.svg)?$/, '.svg');
-        rl.close();
 
         createQrCode(filepath, content, {
             fill: {
