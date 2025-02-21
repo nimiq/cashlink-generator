@@ -27,15 +27,14 @@ async function promptUser(question: string): Promise<string> {
 }
 
 async function createSecret(): Promise<void> {
-    let envContent = '';
-    let existingSalt = '';
+    let envContent: string | undefined;
+    let existingSalt: string | undefined;
 
     // Read existing .env file if it exists
     if (fs.existsSync(ENV_FILE)) {
         envContent = fs.readFileSync(ENV_FILE, 'utf8');
-        const saltMatch = envContent.match(/^SALT=(.*)$/m);
-        if (saltMatch) {
-            existingSalt = saltMatch[1];
+        existingSalt = envContent.match(/^SALT=(.*)$/m)?.[1];
+        if (existingSalt) {
             const replace = await promptUser('Existing salt found. Do you want to replace it? [y/N]: ');
             if (replace.toLowerCase() !== 'y') {
                 console.log('Keeping existing salt.');
@@ -49,12 +48,12 @@ async function createSecret(): Promise<void> {
     const secretBase64 = BufferUtils.toBase64(secretBytes);
 
     // Update or create .env file
-    if (existingSalt) {
-        // Replace existing salt
+    if (envContent) {
+        // Update existing file
         envContent = envContent.replace(/^SALT=.*$/m, `SALT=${secretBase64}`);
     } else {
-        // Add new salt to existing content or create new content with correct defaults
-        const defaultEnv = '# Nimiq Node IP address\n'
+        // Create a new file with correct defaults
+        envContent = '# Nimiq Node IP address\n'
             + 'NODE_IP=127.0.0.1\n'
             + '\n'
             + '# Nimiq Node RPC port\n'
@@ -68,7 +67,6 @@ async function createSecret(): Promise<void> {
             + '\n'
             + '# Salt for cashlink generation (base64 encoded). Must be kept secret.\n'
             + `SALT=${secretBase64}\n`;
-        envContent = envContent || defaultEnv;
     }
 
     // Write to .env file
