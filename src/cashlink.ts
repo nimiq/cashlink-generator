@@ -13,19 +13,9 @@
  */
 
 import { NumberUtils, SerialBuffer, BufferUtils, KeyPair, PrivateKey, Address } from '@nimiq/core';
+import HubApi from '@nimiq/hub-api';
 
-/**
- * Available themes for cashlink customization
- */
-export enum CashlinkTheme {
-    UNSPECIFIED = 0,
-    STANDARD = 1,
-    CHRISTMAS = 2,
-    LUNAR_NEW_YEAR = 3,
-    EASTER = 4,
-    GENERIC = 5,
-    BIRTHDAY = 6,
-}
+export const CashlinkTheme = HubApi.CashlinkTheme;
 
 /**
  * Extra data fields for cashlink transactions
