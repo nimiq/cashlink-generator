@@ -247,16 +247,14 @@ async function wizardCreateCashlinks(): Promise<WizardResult> {
     return { cashlinks, shortLinks };
 }
 
-const Operation = {
-    CHANGE_MESSAGE: 'change-message',
-    CHANGE_THEME: 'change-theme',
-    CREATE_IMAGES: 'create-images',
-    FUND: 'fund',
-    CLAIM: 'claim',
-    STATISTICS: 'statistics',
-} as const;
-
-type OperationType = typeof Operation[keyof typeof Operation];
+enum Operation {
+    CHANGE_MESSAGE = 'change-message',
+    CHANGE_THEME = 'change-theme',
+    CREATE_IMAGES = 'create-images',
+    FUND = 'fund',
+    CLAIM = 'claim',
+    STATISTICS = 'statistics',
+}
 
 type ImageFiles = Map<string, string>;
 
@@ -487,7 +485,7 @@ async function main() {
     let shortLinks: Map<string, string> | null;
     let imageFiles: ImageFiles = new Map();
     let folder: string;
-    let operations: OperationType[];
+    let operations: Operation[];
     let shouldExport = false;
 
     // Handle import or create new cashlinks
@@ -495,10 +493,10 @@ async function main() {
     if (importResult) {
         ({ cashlinks, shortLinks, imageFiles, folder } = importResult);
         const operation = await prompt(`What do you want to do? [${Object.values(Operation).join('/')}]: `);
-        if (!Object.values(Operation).includes(operation as OperationType)) {
+        if (!Object.values(Operation).some((o) => o === operation)) {
             throw new Error(`Unsupported operation ${operation}`);
         }
-        operations = [operation as OperationType];
+        operations = [operation as Operation];
     } else {
         ({ cashlinks, shortLinks } = await wizardCreateCashlinks());
         folder = createFolder();
