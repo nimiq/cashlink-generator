@@ -325,20 +325,6 @@ async function wizardFundCashlinks(cashlinks: Map<string, Cashlink>, rpcClient: 
         return;
     }
 
-    // Import the wallet key if not already imported
-    const isImported = await rpcClient.isWalletAccountImported(userFriendlyAddress);
-    if (!isImported) {
-        console.log('Importing wallet key...');
-        await rpcClient.importWalletKey(privateKey.toHex());
-    }
-
-    // Unlock the account
-    console.log('Unlocking account...');
-    const isUnlocked = await rpcClient.unlockWalletAccount(userFriendlyAddress);
-    if (!isUnlocked) {
-        throw new Error('Failed to unlock account');
-    }
-
     console.log('\nFunding Cashlinks');
     await fundCashlinks(cashlinks, fee, privateKey, rpcClient);
     console.log('Cashlinks funded.');

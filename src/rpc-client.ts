@@ -15,7 +15,7 @@ type TransactionParams = BaseTransactionParams;
 
 export interface RawTransactionParams {
     sender: KeyPair;
-    recipient: string;
+    recipient: Address;
     value: number;
     fee?: number;
     data?: Uint8Array;
@@ -89,25 +89,11 @@ export class RpcClient {
     }
 
     /**
-     * Sends a transaction
-     * @param params - Transaction parameters
-     * @returns Promise resolving to the transaction hash
-     */
-    async sendTransaction(params: TransactionParams): Promise<string> {
-        const { data } = await this._client.consensus.sendTransaction({
-            ...params,
-            relativeValidityStartHeight: 0,
-        });
-        if (!data) throw new Error('Failed to send transaction');
-        return data;
-    }
-
-    /**
      * Sends a raw transaction using direct transaction creation and signing
      * @param params - Raw transaction parameters including KeyPair for signing
      * @returns Promise resolving to the transaction hash
      */
-    async sendRawTransaction(params: RawTransactionParams): Promise<string> {
+    async sendTransaction(params: RawTransactionParams): Promise<string> {
         const blockHeight = await this.getBlockHeight();
         const networkId = {
             main: 24,
@@ -116,7 +102,7 @@ export class RpcClient {
         // Create transaction using TransactionBuilder
         const transaction = TransactionBuilder.newBasicWithData(
             params.sender.publicKey.toAddress(),
-            Address.fromUserFriendlyAddress(params.recipient),
+            params.recipient,
             params.data || new Uint8Array(),
             BigInt(params.value),
             BigInt(params.fee || 0),
@@ -131,65 +117,6 @@ export class RpcClient {
             rawTransaction: transaction.toHex(),
         });
         if (!data) throw new Error('Failed to send raw transaction');
-        return data;
-    }
-
-    /**
-     * Imports a wallet key
-     * @param keyData - The key data to import
-     * @returns Promise resolving to import result
-     */
-    async importWalletKey(keyData: string): Promise<string> {
-        const { data } = await this._client.wallet.importRawKey({
-            keyData,
-            passphrase: '',
-        });
-        if (!data) throw new Error('Failed to import wallet key');
-        return data;
-    }
-
-    /**
-     * Lists all imported wallet accounts
-     * @returns Promise resolving to array of addresses
-     */
-    async listWalletAccounts(): Promise<string[]> {
-        const { data } = await this._client.wallet.listAccounts();
-        if (!data) throw new Error('Failed to list wallet accounts');
-        return data;
-    }
-
-    /**
-     * Checks if a wallet account is imported
-     * @param address - The address to check
-     * @returns Promise resolving to import status
-     */
-    async isWalletAccountImported(address: string): Promise<boolean> {
-        const { data } = await this._client.wallet.isAccountImported(address);
-        if (typeof data !== 'boolean') throw new Error('Failed to check if wallet account is imported');
-        return data;
-    }
-
-    /**
-     * Unlocks a wallet account for signing
-     * @param address - The address to unlock
-     * @param passphrase - Optional passphrase
-     * @param duration - Optional duration in milliseconds
-     * @returns Promise resolving to unlock status
-     */
-    async unlockWalletAccount(address: string, passphrase: string = '', duration?: number): Promise<true> {
-        const { data } = await this._client.wallet.unlockAccount(address, { passphrase, duration });
-        if (!data) throw new Error('Failed to unlock wallet account');
-        return true;
-    }
-
-    /**
-     * Checks if a wallet account is unlocked
-     * @param address - The address to check
-     * @returns Promise resolving to unlock status
-     */
-    async isWalletAccountUnlocked(address: string): Promise<boolean> {
-        const { data } = await this._client.wallet.isAccountUnlocked(address);
-        if (typeof data !== 'boolean') throw new Error('Failed to check if wallet account is unlocked');
         return data;
     }
 

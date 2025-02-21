@@ -11,12 +11,7 @@
  * The transaction handler ensures proper funding and claiming of cashlinks.
  */
 
-import {
-    BufferUtils,
-    KeyPair,
-    PrivateKey,
-    Address,
-} from '@nimiq/core';
+import { KeyPair, PrivateKey, Address } from '@nimiq/core';
 import { Cashlink, CashlinkExtraData } from './cashlink';
 import { RpcClient } from './rpc-client';
 
@@ -34,16 +29,15 @@ export async function fundCashlinks(
     rpcClient: RpcClient,
 ): Promise<void> {
     const keyPair = KeyPair.derive(privateKey);
-    const senderAddress = keyPair.publicKey.toAddress();
 
     let sent = 0;
     for (const cashlink of cashlinks.values()) {
         await rpcClient.sendTransaction({
-            wallet: senderAddress.toUserFriendlyAddress(),
-            recipient: cashlink.address.toUserFriendlyAddress(),
+            sender: keyPair,
+            recipient: cashlink.address,
             value: cashlink.value,
             fee: txFee,
-            data: BufferUtils.toHex(CashlinkExtraData.FUNDING),
+            data: CashlinkExtraData.FUNDING,
         });
 
         sent++;
@@ -75,9 +69,9 @@ export async function claimCashlinks(
 
         if (cashlinkBalance > 0) {
             unclaimed++;
-            await rpcClient.sendRawTransaction({
+            await rpcClient.sendTransaction({
                 sender: cashlink.keyPair,
-                recipient: recipient.toUserFriendlyAddress(),
+                recipient,
                 value: cashlinkBalance,
                 fee: 0,
                 data: CashlinkExtraData.CLAIMING,
