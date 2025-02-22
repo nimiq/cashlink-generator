@@ -1,4 +1,25 @@
-secret
-generated-cashlinks
-node_modules
-.idea
+/secret
+/generated-cashlinks
+/generated-qr
+/.idea
+.env
+
+# Yarn
+# Currently, I'm not adding the .yarn folder and .pnp loaders to version control. Uncomment the specific lines below, if
+# you want to enable the associated feature, like patches, project specific yarn versions, offline mirror, zero-installs
+# etc., at the expense of having to add these auto-generated source files to version control, which add noise and are
+# hard to audit.
+# See here for documentation: https://yarnpkg.com/getting-started/qa#which-files-should-be-gitignored
+# If you add .yarn/releases or .yarn/plugins to version control, you might want to consider adding a .gitattributes file
+# as mentioned there, however with disadvantages: https://github.com/yarnpkg/yarn/issues/7741#issuecomment-1228846511
+.yarn
+.yarn/*
+# !.yarn/patches
+# !.yarn/plugins
+# !.yarn/releases
+# !.yarn/sdks
+# !.yarn/versions
+
+# Swap these if you want to use the offline mirror or zero-install features (see https://yarnpkg.com/features/caching)
+# !.yarn/cache
+.pnp.*

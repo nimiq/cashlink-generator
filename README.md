@@ -1,62 +1,54 @@
-# Cashlink Generator
+# Nimiq Cashlink Generator
 
 This is a node-js based tool for generating and managing Cashlinks in bulk. It supports generating, modifying, funding
-and claiming Cashlinks as well as creating statistics on generated Cashlinks. If you are instead searching for an easier
-to use, web-based tool for simply creating and funding Cashlinks in bulk,
-https://github.com/Albermonte/Nimiq-Multi-Cashlink might be interesting for you. However, for creating a large number of
-Cashlinks (>10 for free funding transactions or >500 for paid funding transactions), this tool is more reliable as it
-observes mempool limits.
+and claiming Cashlinks as well as creating statistics on generated Cashlinks.
 
-## Installation of Dependencies
+If you are instead searching for an easier to use, web-based tool for simply creating and funding Cashlinks in bulk,
+https://github.com/Albermonte/Nimiq-Multi-Cashlink might be interesting for you. However, this tool here provides more
+features like creation of QR codes and managing links after their creation, and is more reliable for creating a large
+number of Cashlinks.
 
-This tool depends on [@nimiq/core](https://github.com/nimiq/core-js) and therefore has the same build dependencies.
-Follow steps 1. to 3. in [@nimiq/core's quickstart guide](https://github.com/nimiq/core-js#quickstart).
+## Setup
 
-Then run `yarn` in the project folder to install the dependencies.
-
-Additionally, using the cashlink generator requires a local Nimiq node running in the background. To install the Nimiq
-client either follow the remaining steps of @nimiq/core's quickstart guide or
-[install a prebuilt binary package](https://www.nimiq.com/developers/downloads/).
-
-## Starting the Nimiq Node
-
-If you manually installed the Nimiq client via the quickstart guide, download the
-[sample config file](https://github.com/nimiq/core-js/blob/master/clients/nodejs/sample.conf). If you installed a
-prebuilt package, locate the configuration file as described
-[here in the "Configuration" section](https://www.nimiq.com/developers/downloads/).
-
-Make the following changes to the config file:
-- Enable the `rpcServer`.
-- If you do not intend to run your Nimiq node continuously, but only for this Cashlink generator, you can change the
-  `protocol` to `dumb`.
-- Change the node `type` to `light` or `nano`. A light node will take a few minutes to sync but will be able to send out
-  transactions faster and potentially more reliably. A nano node will sync within seconds but will be slower to send
-  transactions, as it has to request Cashlink balances and Mempool updates from other nodes.
-- If you do not want any blockchain state to be stored on your hard drive but instead to only be held in memory, you can
-  enable the `volatile` setting. By enabling this, you will however always have to sync from scratch when you start your
-  node.
-
-Then, to start the Nimiq node if you installed the client manually, run
+1. Install dependencies:
 ```bash
-clients/nodejs/nimiq --config=<path/to/config-file>
+yarn install
 ```
-If you installed a prebuilt package, start the client as described
-[here in the "Usage" section](https://www.nimiq.com/developers/downloads/).
 
-## Generating a Master Secret
-
+2. Generate secrets:
 Cashlinks are derived from a master secret, such that they can potentially be re-created from that secret.
 To generate a master secret, run
-```batch
-node create-secret.js
+```bash
+yarn run secret
 ```
+
+3. Configure environment:
+Edit `.env` with your settings:
+- `NODE_IP`: Your Nimiq node IP (default: 127.0.0.1)
+- `NODE_PORT`: RPC port (default: 8648)
+- `NETWORK`: Choose 'main' or 'test' network
+- `TOKEN_LENGTH`: Length of cashlink tokens
+- `SALT`: Base64 encoded salt for cashlink generation created in step 2.
 
 ## Usage
 
-Launch the Cashlink generator via
+This tool requires running a [Nimiq node](https://github.com/nimiq/core-rs-albatross), which can also be a local node.
+For installation and configuration instructions of the Nimiq node, have a look at its readme.
+
+For use with the cashlink generator, the node must be run with enabled `rpc-server` and `sync_mode="full"`. If you want
+to use the statistics tool, additionally `index_history = true` must be enabled. Also note that the statistics tool
+currently only works with the transaction history available to your node, i.e. only transactions that happened while the
+node was running.
+
+Wait for the node to establish network consensus.
+
+Then to launch the cashlink generator:
 ```bash
-node index.js
+yarn main
 ```
+
+The supported operations are explained in the following sections. To remove the blockchain data synced by the Nimiq node
+after you're done using the cashlink generator, if you think that you won't need it anymore, see [Cleanup](#cleanup).
 
 ### Cashlink Creation
 
@@ -123,9 +115,11 @@ For creating statistics on previously created Cashlinks.
 - Optionally specify an address that should be considered as the address where funds have been reclaimed to (see
   previous section).
 - Specify an IANA timezone for the claims-per-day statistic. E.g. "UTC", "Europe/Berlin", "America/Costa_Rica".
-- Generating the statistics will take some time.
 - After the statistics have been generated, you have the choice to export them to a text file as specified by the
   prompt.
+
+Note that the statistics tool currently only works with the transaction history available to your node, i.e. only
+transactions that happened while the node was running.
 
 ### Create Images
 
@@ -157,11 +151,18 @@ For changing the encoded theme of previously created Cashlinks.
 - Specify a new theme by name or number.
 - If you changed the theme, the Cashlink `.csv` file will be re-exported.
 
+### Cleanup
+
+When you're done using the cashlink generator, you can consider deleting the blockchain data synced by the Nimiq node,
+if you think that you won't need it anymore. The path where it's stored can be found in the `[database]` section of the
+node's config file. Make sure to only delete the `consensus` folder(s), and not, for example, keys imported into the
+node.
+
 ## Additional Utilities
 
 ### Master Secret Creation
 
-See section [Generating a Master Secret](#generating-a-master-secret).
+See section [Setup](#setup).
 
 ### Nimiq Style SVG QR Code Generation
 
@@ -169,8 +170,75 @@ Although not really related to the main functionality of this package, this proj
 codes in Nimiq Style, same as they are generated for Cashlinks.
 To launch this tool, run
 ```batch
-node render-qr-codes.js
+yarn run qr
 ```
+
+## CSV Format
+
+The tool exports and imports CSV files in the following format:
+```
+token,shortlink,image-file,cashlink-url,private-key-base64
+```
+
+Example:
+```
+abc123,https://nim.id/abc123,qr-abc123.svg,https://hub.nimiq.com/cashlink/#...,...
+```
+
+## Examples
+
+1. **Create New Cashlinks**
+   ```
+   > yarn main
+   > [Enter] for new cashlinks
+   > Number of cashlinks: 10
+   > Value in NIM: 1
+   > Message: Welcome to Nimiq!
+   > Theme: christmas
+   ```
+
+2. **Modify Existing Cashlinks**
+   ```
+   > yarn main
+   > Enter path to CSV: ./generated-cashlinks/2024-01-25/cashlinks.csv
+   > Operation: change-theme
+   > New theme: birthday
+   ```
+
+3. **Generate Statistics**
+   ```
+   > yarn main
+   > Enter path to CSV: ./generated-cashlinks/2024-01-25/cashlinks.csv
+   > Operation: statistics
+   ```
+
+4. **Generate QR Code**
+   ```
+   > yarn run qr
+   > QR Content: https://nimiq.com
+   > Color (light-blue/indigo; default indigo): light-blue
+   > Error Correction (L/M/Q/H; default M): H
+   > Filename (default nimiq-com-light-blue-H):
+   ```
+
+   This will generate a QR code in the `generated-qr` directory with:
+   - Nimiq's radial gradient style
+   - Light blue color scheme
+   - High error correction level
+   - SVG format output
+
+## Requirements
+
+- Node.js 16+
+- Running Nimiq node
+- Network access to Nimiq node
+
+## Security Notes
+
+- Keep your `.env` file secure
+- Back up generated CSV files safely
+- Never share private keys
+- Use this tool at your own risk
 
 ## Tips and Tricks
 

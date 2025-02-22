@@ -1,15 +1,29 @@
 {
   "name": "cashlink-generator",
   "version": "1.0.0",
-  "description": "Bulk Cashlink Creation and Management Tool",
-  "main": "index.js",
+  "description": "A tool for creating, managing, and handling Nimiq cashlinks with QR code generation support",
+  "main": "src/index.ts",
+  "scripts": {
+    "main": "node --no-warnings=ExperimentalWarning --experimental-transform-types src/index.ts",
+    "secret": "node --no-warnings=ExperimentalWarning --experimental-transform-types scripts/create-secret.ts",
+    "test": "node --no-warnings=ExperimentalWarning --experimental-transform-types test/index.ts",
+    "qr": "node --no-warnings=ExperimentalWarning --experimental-transform-types src/render-qr-codes.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
   "author": "Nimiq, nimiq.com",
   "license": "MIT",
+  "packageManager": "yarn@4.6.0",
   "dependencies": {
-    "@nimiq/core": "^1.6.2",
-    "@nimiq/hub-api": "^1.8.0",
-    "@nimiq/utils": "^0.11.1",
-    "canvas": "^2.11.2"
+    "@blouflash/nimiq-rpc": "npm:@jsr/blouflash__nimiq-rpc@^2.1.1",
+    "@nimiq/core": "^2.0.6",
+    "@nimiq/hub-api": "^1.10.0",
+    "canvas": "^3.1.0",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.7.3"
   },
-  "packageManager": "yarn@1.22.19"
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^22.10.7"
+  }
 }
