@@ -12,14 +12,14 @@ number of Cashlinks.
 
 1. Install dependencies:
 ```bash
-pnpm install
+yarn install
 ```
 
 2. Generate secrets:
 Cashlinks are derived from a master secret, such that they can potentially be re-created from that secret.
 To generate a master secret, run
 ```bash
-pnpm run secret
+yarn run secret
 ```
 
 3. Configure environment:
@@ -44,7 +44,7 @@ Wait for the node to establish network consensus.
 
 Then to launch the cashlink generator:
 ```bash
-pnpm start
+yarn start
 ```
 
 The supported operations are explained in the following sections. To remove the blockchain data synced by the Nimiq node
@@ -170,7 +170,7 @@ Although not really related to the main functionality of this package, this proj
 codes in Nimiq Style, same as they are generated for Cashlinks.
 To launch this tool, run
 ```batch
-pnpm run qr
+yarn run qr
 ```
 
 ## CSV Format
@@ -189,7 +189,7 @@ abc123,https://nim.id/abc123,qr-abc123.svg,https://hub.nimiq.com/cashlink/#...,.
 
 1. **Create New Cashlinks**
    ```
-   > pnpm start
+   > yarn start
    > [Enter] for new cashlinks
    > Number of cashlinks: 10
    > Value in NIM: 1
@@ -199,7 +199,7 @@ abc123,https://nim.id/abc123,qr-abc123.svg,https://hub.nimiq.com/cashlink/#...,.
 
 2. **Modify Existing Cashlinks**
    ```
-   > pnpm start
+   > yarn start
    > Enter path to CSV: ./generated-cashlinks/2024-01-25/cashlinks.csv
    > Operation: change-theme
    > New theme: birthday
@@ -207,14 +207,14 @@ abc123,https://nim.id/abc123,qr-abc123.svg,https://hub.nimiq.com/cashlink/#...,.
 
 3. **Generate Statistics**
    ```
-   > pnpm start
+   > yarn start
    > Enter path to CSV: ./generated-cashlinks/2024-01-25/cashlinks.csv
    > Operation: statistics
    ```
 
 4. **Generate QR Code**
    ```
-   > pnpm run qr
+   > yarn run qr
    > QR Content: https://nimiq.com
    > Color (light-blue/indigo; default indigo): light-blue
    > Error Correction (L/M/Q/H; default M): H

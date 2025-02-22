@@ -4,16 +4,16 @@
   "description": "A tool for creating, managing, and handling Nimiq cashlinks with QR code generation support",
   "main": "src/index.ts",
   "scripts": {
-    "start": "NODE_OPTIONS='--no-deprecation' tsx src/index.ts",
-    "secret": "NODE_OPTIONS='--no-deprecation' tsx scripts/create-secret.ts",
-    "test": "NODE_OPTIONS='--no-deprecation' tsx test/index.ts",
-    "qr": "NODE_OPTIONS='--no-deprecation' tsx src/render-qr-codes.ts",
+    "start": "NODE_OPTIONS='--no-deprecation' yarn tsx src/index.ts",
+    "secret": "NODE_OPTIONS='--no-deprecation' yarn tsx scripts/create-secret.ts",
+    "test": "NODE_OPTIONS='--no-deprecation' yarn tsx test/index.ts",
+    "qr": "NODE_OPTIONS='--no-deprecation' yarn tsx src/render-qr-codes.ts",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "Nimiq, nimiq.com",
   "license": "MIT",
-  "packageManager": "pnpm@9.12.2+sha512.22721b3a11f81661ae1ec68ce1a7b879425a1ca5b991c975b074ac220b187ce56c708fe5db69f4c962c989452eee76c82877f4ee80f474cebd61ee13461b6228",
+  "packageManager": "yarn@4.6.0",
   "dependencies": {
     "@blouflash/nimiq-rpc": "npm:@jsr/blouflash__nimiq-rpc@^2.1.1",
     "@nimiq/core": "^2.0.6",
