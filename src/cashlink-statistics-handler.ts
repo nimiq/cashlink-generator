@@ -14,8 +14,8 @@
 
 import { type Address } from '@nimiq/core';
 import { type Transaction as RpcTransaction } from '@blouflash/nimiq-rpc';
-import { type RpcClient } from './rpc-client';
-import { type Cashlink } from './cashlink';
+import { type RpcClient } from './rpc-client.ts';
+import { type Cashlink } from './cashlink.ts';
 
 /**
  * Creates comprehensive statistics for a set of cashlinks

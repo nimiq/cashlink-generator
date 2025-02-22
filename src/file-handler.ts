@@ -14,7 +14,7 @@
 
 import fs from 'fs';
 import { BufferUtils } from '@nimiq/core';
-import { Cashlink } from './cashlink';
+import { Cashlink } from './cashlink.ts';
 
 /**
  * Data structure for imported cashlink information

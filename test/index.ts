@@ -12,8 +12,8 @@
  * These tests ensure proper integration with the Nimiq network.
  */
 
-import { getConfig } from '../src/config';
-import { RpcClient } from '../src/rpc-client';
+import { getConfig } from '../src/config.ts';
+import { RpcClient } from '../src/rpc-client.ts';
 
 // This uses Testnet
 async function main() {

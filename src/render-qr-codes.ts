@@ -16,8 +16,8 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createCanvas, type Canvas, type CanvasRenderingContext2D } from 'canvas';
-import QrCode from './qr-code';
-import { prompt } from './utils';
+import QrCode from './qr-code.ts';
+import { prompt } from './utils.ts';
 
 /**
  * Canvas size and padding configuration

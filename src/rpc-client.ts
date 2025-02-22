@@ -1,6 +1,6 @@
 import { NimiqRPCClient, type Transaction } from '@blouflash/nimiq-rpc';
 import { KeyPair, Address, TransactionBuilder } from '@nimiq/core';
-import { getConfig } from './config';
+import { getConfig } from './config.ts';
 
 /** Parameters for sending a transaction */
 interface BaseTransactionParams {

@@ -12,8 +12,8 @@
  */
 
 import { KeyPair, PrivateKey, Address } from '@nimiq/core';
-import { Cashlink, CashlinkExtraData } from './cashlink';
-import { RpcClient } from './rpc-client';
+import { Cashlink, CashlinkExtraData } from './cashlink.ts';
+import { RpcClient } from './rpc-client.ts';
 
 /**
  * Funds multiple cashlinks from a single wallet

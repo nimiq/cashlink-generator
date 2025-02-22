@@ -1,15 +1,16 @@
 {
   "compilerOptions": {
-    "module": "esnext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
     "target": "esnext",
     "strict": true,
-    "moduleResolution": "Bundler",
     "skipLibCheck": true,
     "importHelpers": true,
     "esModuleInterop": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
-    "noImplicitThis": true,
+    "noImplicitThis": true
   }
 }
 

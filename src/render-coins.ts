@@ -14,8 +14,8 @@
 
 import fs from 'fs';
 import { createCanvas, registerFont, type Canvas, type CanvasRenderingContext2D } from 'canvas';
-import { Cashlink } from './cashlink';
-import QrCode from './qr-code';
+import { Cashlink } from './cashlink.ts';
+import QrCode from './qr-code.ts';
 
 // US letter format at 400 dpi
 // const CANVAS_WIDTH = 8.5 * 400;

@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { BufferUtils } from '@nimiq/core';
-import { prompt } from '../src/utils';
+import { prompt } from '../src/utils.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
