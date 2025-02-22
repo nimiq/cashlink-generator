@@ -44,7 +44,7 @@ Wait for the node to establish network consensus.
 
 Then to launch the cashlink generator:
 ```bash
-yarn start
+yarn main
 ```
 
 The supported operations are explained in the following sections. To remove the blockchain data synced by the Nimiq node
@@ -189,7 +189,7 @@ abc123,https://nim.id/abc123,qr-abc123.svg,https://hub.nimiq.com/cashlink/#...,.
 
 1. **Create New Cashlinks**
    ```
-   > yarn start
+   > yarn main
    > [Enter] for new cashlinks
    > Number of cashlinks: 10
    > Value in NIM: 1
@@ -199,7 +199,7 @@ abc123,https://nim.id/abc123,qr-abc123.svg,https://hub.nimiq.com/cashlink/#...,.
 
 2. **Modify Existing Cashlinks**
    ```
-   > yarn start
+   > yarn main
    > Enter path to CSV: ./generated-cashlinks/2024-01-25/cashlinks.csv
    > Operation: change-theme
    > New theme: birthday
@@ -207,7 +207,7 @@ abc123,https://nim.id/abc123,qr-abc123.svg,https://hub.nimiq.com/cashlink/#...,.
 
 3. **Generate Statistics**
    ```
-   > yarn start
+   > yarn main
    > Enter path to CSV: ./generated-cashlinks/2024-01-25/cashlinks.csv
    > Operation: statistics
    ```
